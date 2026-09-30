@@ -296,7 +296,7 @@ function setDims(mode) {
    ========================================================= */
 const Sound = (() => {
   let ctx = null, master, music, sfx, on = true, next = 0, step = 0, musicOn = true, curMode = 'lobby', motorOsc = null, motorGain = null, motorOn = false;
-  const MUSIC_VOL = { lobby: 0.55, game: 0.15, off: 0 };   // 대기: 크게 · 게임 중: 작게 깔림 · 결과 나오면: 끝
+  const MUSIC_VOL = { lobby: 0.55, game: 0, off: 0 };   // 배경음악은 대기 화면에서만 · 게임 중엔 효과음만 (결과 소리와 안 겹치게)
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   // 대기 화면 배경음악: 잔잔한 오락실 느낌 (C – Am – F – G, 직접 만든 곡)
   const CHORDS = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
