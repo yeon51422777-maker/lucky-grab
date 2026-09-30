@@ -298,7 +298,8 @@ function setDims(mode) {
    소리 — 대기 화면 배경음악(직접 만든 곡) + 게임 중 조작음 + 두구두구 · 펑 · 팡파레
    ========================================================= */
 const Sound = (() => {
-  let ctx = null, master, music, sfx, on = true, next = 0, step = 0, musicOn = true, motorOsc = null, motorGain = null, motorOn = false;
+  let ctx = null, master, music, sfx, on = true, next = 0, step = 0, musicOn = true, curMode = 'lobby', motorOsc = null, motorGain = null, motorOn = false;
+  const MUSIC_VOL = { lobby: 0.55, game: 0.15, off: 0 };   // 대기: 크게 · 게임 중: 작게 깔림 · 결과 나오면: 끝
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   // 대기 화면 배경음악: 잔잔한 오락실 느낌 (C – Am – F – G, 직접 만든 곡)
   const CHORDS = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
@@ -340,16 +341,17 @@ const Sound = (() => {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = on ? 0.8 : 0; master.connect(ctx.destination);
-      music = ctx.createGain(); music.gain.value = musicOn ? 0.55 : 0; music.connect(master);
-      sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
+      music = ctx.createGain(); music.gain.value = MUSIC_VOL[curMode]; music.connect(master);
+      sfx = ctx.createGain(); sfx.gain.value = 1.35; sfx.connect(master);   // 효과음은 또렷하게
       next = ctx.currentTime + 0.1; setInterval(schedule, 60);
     },
     toggle() { on = !on; if (master) master.gain.setTargetAtTime(on ? 0.8 : 0, ctx.currentTime, 0.05); return on; },
-    // 'lobby' = 배경음악, 'game' = 음악 끄고 조작음만
+    // 'lobby' = 배경음악 크게, 'game' = 작게 깔고 효과음 위주, 'off' = 결과가 나오면 음악 끝
     mode(m) {
-      const want = m === 'lobby'; if (want === musicOn) return; musicOn = want;
-      if (ctx) { music.gain.setTargetAtTime(want ? 0.55 : 0, ctx.currentTime, 0.35); if (want) step = 0; }
-      if (!want) this.motor(false);
+      if (m === curMode) return;
+      const prev = curMode; curMode = m; musicOn = MUSIC_VOL[m] > 0;
+      if (ctx) { music.gain.setTargetAtTime(MUSIC_VOL[m], ctx.currentTime, m === 'off' ? 0.3 : 0.4); if (musicOn && prev === 'off') step = 0; }
+      if (m !== 'game') this.motor(false);
     },
     motor(onFlag) {   // 크레인이 움직이는 동안 '위이잉'
       if (!ctx) return;
@@ -360,16 +362,16 @@ const Sound = (() => {
         motorGain = ctx.createGain(); motorGain.gain.value = 0;
         motorOsc.connect(lp); lp.connect(motorGain); motorGain.connect(sfx); motorOsc.start();
       }
-      if (onFlag !== motorOn) { motorOn = onFlag; motorGain.gain.setTargetAtTime(onFlag ? 0.08 : 0, ctx.currentTime, 0.06); }
+      if (onFlag !== motorOn) { motorOn = onFlag; motorGain.gain.setTargetAtTime(onFlag ? 0.13 : 0, ctx.currentTime, 0.06); }
     },
-    drop()  { if (!ctx) return; tone(700, ctx.currentTime, 0.28, 'square', sfx, 0.05, 300); },
-    clunk() { if (!ctx) return; const t = ctx.currentTime; noise(t, 0.12, 0.35, 900); tone(110, t, 0.18, 'sine', sfx, 0.4, 55); },
+    drop()  { if (!ctx) return; tone(700, ctx.currentTime, 0.28, 'square', sfx, 0.09, 300); },
+    clunk() { if (!ctx) return; const t = ctx.currentTime; noise(t, 0.12, 0.5, 900); tone(110, t, 0.18, 'sine', sfx, 0.55, 55); },
     lift()  {},
-    beep(hi){ if (!ctx) return; tone(hi ? 1320 : 880, ctx.currentTime, 0.09, 'square', sfx, 0.07); },
+    beep(hi){ if (!ctx) return; tone(hi ? 1320 : 880, ctx.currentTime, 0.1, 'square', sfx, 0.11); },
     roll(dur) {   // 3·2·1 동안 두구두구
       if (!ctx) return; const t0 = ctx.currentTime; let t = 0;
-      while (t < dur) { const k = t / dur; noise(t0 + t, 0.05, 0.07 + 0.3 * k, 3200); t += 0.12 - 0.075 * k; }
-      tone(hz(40), t0, dur, 'triangle', sfx, 0.14);
+      while (t < dur) { const k = t / dur; noise(t0 + t, 0.05, 0.1 + 0.4 * k, 3200); t += 0.12 - 0.075 * k; }
+      tone(hz(40), t0, dur, 'triangle', sfx, 0.18);
     },
     pop(big) {
       if (!ctx) return; const t = ctx.currentTime;
@@ -388,6 +390,7 @@ const Sound = (() => {
     meh() { this.aww(); },
     miss() { this.aww(); },
     set fast(v) {},
+    get state() { return { mode: curMode, vol: music ? +music.gain.value.toFixed(2) : null, started: !!ctx }; },   // 시험용
   };
 })();
 
@@ -895,7 +898,7 @@ class Claw {
             if (this.triesLeft > 0) { this.state = 'aim'; this.time = CONFIG.playSec; this.lastBeep = 99; }
             else { this.state = 'done'; checkRoundOver(); }
           } else if (remoteGame) this.state = 'idle';
-          else { this.state = 'aim'; this.time = CONFIG.playSec; this.lastBeep = 99; }
+          else { this.state = 'aim'; this.time = CONFIG.playSec; this.lastBeep = 99; if (playing) Sound.mode('game'); }
         }
         break;
       case 'done': case 'idle':
@@ -1002,6 +1005,8 @@ function showResult(claw, res) {
     if (res.kind === 'win') Net.set('winners/w' + at + claw.player.slot, { name: claw.player.name, rank: res.rank, code, at, sent: false });
   }
   if (res.kind === 'win') Sound.win(); else Sound.aww();
+  const stillPlaying = claws.some((c) => c !== claw && ['aim', 'drop', 'close', 'lift', 'reveal'].includes(c.state) && (c.player || !remoteGame));
+  if (!stillPlaying || !remoteGame) Sound.mode('off');   // 결과가 나오면 노래도 끝
   setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 420); }, 3400);
 }
 
@@ -1339,7 +1344,7 @@ Net.init();
 
 // 시험용: 화면 갱신과 상관없이 시뮬레이션을 n프레임 진행
 window.__grab = {
-  CONFIG, claws, resultLog, get balls() { return balls; }, build, Net, Lottery, get phase() { return phase; },
+  CONFIG, claws, resultLog, get balls() { return balls; }, build, Net, Lottery, Sound, get phase() { return phase; },
   step(n) { for (let i = 0; i < n; i++) { for (const c of claws) c.update(1 / 60); updatePour(1 / 60); unstick(1 / 60); world.step(); updateSparks(1 / 60); } syncBalls(); layoutOverlay(); draw(); },
 };
 
