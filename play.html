@@ -307,8 +307,7 @@ function onResult(v) {
   const win = v.kind === 'win', sc = $('sResult');
   sc.classList.toggle('win', win);
   $('rEyebrow').textContent = eyebrow; $('rBig').textContent = big; $('rBig').classList.toggle('en', /^[A-Z !]+$/.test(big)); $('rImg').src = img;
-  const who = $('rWho'); who.querySelector('span').textContent = v.label ? `${myName}님 · ${v.label}` : `${myName}님`;
-  who.querySelector('i').hidden = !v.label; who.style.setProperty('--b', BALL[v.label] || '#C9CED7');
+  const who = $('rWho'); who.querySelector('span').textContent = `${myName}님`; who.querySelector('i').hidden = true;
   $('rKakao').hidden = !win; $('rCode').hidden = !win;
   if (win) {
     $('rCode').querySelector('b').textContent = v.code;
@@ -318,7 +317,7 @@ function onResult(v) {
       try { navigator.clipboard.writeText(text).catch(() => {}); } catch (e) {}
     };
   } else {
-    $('rNote').textContent = v.kind === 'nogift' ? '이번 공은 선물 공이 아니에요' : v.kind === 'slip' ? '공이 올라가다 미끄러졌어요' : '아무것도 못 잡았어요';
+    $('rNote').textContent = v.kind === 'nogift' ? '이번엔 선물이 안 나왔어요' : v.kind === 'slip' ? '공이 올라가다 미끄러졌어요' : '아무것도 못 잡았어요';
   }
   show('sResult'); if (navigator.vibrate) navigator.vibrate(win ? [60, 60, 120] : 40);
 }

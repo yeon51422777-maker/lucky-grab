@@ -769,15 +769,14 @@ class Claw {
         const step = Math.floor(T / STEP);
         if (step !== this.cdStep && step < 3) {
           this.cdStep = step; showCd(this, 3 - step); Sound.beep(step === 2);
-          if (step === 2 && this.ticket > 0) morph(b, this.ticket);   // 마지막 1에서 금색·핑크로 변신
         }
         this.shake = k;
         b.mesh.scale.setScalar(b.r * (1 + 0.12 * k + 0.05 * k * Math.sin(T * 38)));
-        b.mesh.material.emissiveIntensity = 0.25 + k * (this.ticket > 0 ? 1.6 : 0.9);
+        b.mesh.material.emissiveIntensity = 0.25 + k * 1.2;   // 당첨이든 꽝이든 똑같이 (미리 티 나지 않게)
         if (T >= STEP * 3) {
           const pos = b.mesh.position.clone(), res = judgeTicket(this.ticket, b);
           hideCd(this); flash(); Sound.pop(this.ticket > 0);
-          burst(pos, this.ticket > 0 ? res.color : TYPES[b.type].color, this.ticket > 0 ? 70 : 28);
+          burst(pos, this.ticket > 0 ? TYPES.gold.color : TYPES[b.type].color, this.ticket > 0 ? 70 : 28);
           if (this.ticket > 0) giftPop(pos, this.ticket);
           this.held = null; this.shake = 0; removeBall(b); showResult(this, res); this.rest();
         }
@@ -875,7 +874,7 @@ function showResult(claw, res) {
   const who = claw.player ? claw.player.name + '님' : claw.cfg.name;
   const T = {
     win1:   ['WINNER', '당첨!', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
-    nogift: ['NICE TRY', '다음 기회에~', '이번 공은 선물 공이 아니에요'],
+    nogift: ['NICE TRY', '다음 기회에~', '이번엔 선물이 안 나왔어요'],
     slip:   ['SO CLOSE', '다음 기회에~', '공이 올라가다 미끄러졌어요'],
     miss:   ['MISSED', '다음 기회에~', '아무것도 못 잡았어요'],
   };
@@ -887,8 +886,7 @@ function showResult(claw, res) {
   card.querySelector('.eyebrow').textContent = eyebrow;
   card.querySelector('.big').textContent = big; card.querySelector('.big').classList.toggle('en', /^[A-Z !]+$/.test(big));
   const w = card.querySelector('.who');
-  if (res.label) { const i = document.createElement('i'); i.style.setProperty('--b', res.color); w.append(i); }
-  w.append(res.label ? `${who} · ${res.label}` : who);
+  w.append(who);
   card.querySelector('.sub').textContent = sub;
   $('results').appendChild(card); resultLog.push(`${claw.player ? claw.player.name : claw.cfg.name}: ${big} ${res.label || ''}`);
   if (claw.player) {
