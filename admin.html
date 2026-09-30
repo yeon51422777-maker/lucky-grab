@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>LUCKY GRAB · 관리자</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700&family=Noto+Sans+KR:wght@500;700;900&display=swap">
+<style>
+/* 진행자 전용 — 인원수·선물 개수(참가자에게 비공개), 남은 제비, 당첨자 확인 코드 */
+:root{
+  --bg:#111216; --panel:#1A1C22; --line:#2A2D36; --ink:#F2F3F6; --sub:#9EA2AD; --lime:#B8F400; --pink:#FF5FD8; --gold:#F2B01E; --warn:#FFB547;
+  --display:'Anton','Archivo',sans-serif; --latin:'Archivo','Noto Sans KR',sans-serif; --ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  color-scheme:dark;
+}
+*{ box-sizing:border-box }
+[hidden]{ display:none !important }
+body{ margin:0; background:var(--bg); color:var(--ink); font:500 15px/1.6 var(--ko) }
+.wrap{ max-width:720px; margin:0 auto; padding-inline:16px; padding-block:28px 60px; display:grid; gap:18px }
+header{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap }
+h1{ margin:0; font:400 34px/1 var(--display); letter-spacing:.03em }
+h1 span{ color:var(--lime) }
+.room{ font:700 13px/1 var(--latin); letter-spacing:.12em; color:var(--sub) }
+section{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 18px 20px; display:grid; gap:14px }
+h2{ margin:0; font:900 17px/1.3 var(--ko) }
+h2 small{ font:500 13px/1 var(--ko); color:var(--sub); margin-left:6px }
+.fields{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px }
+@media (max-width:480px){ .fields{ grid-template-columns:1fr } }
+.field{ display:grid; gap:6px }
+.field label{ font:700 13px/1 var(--ko); color:var(--sub) }
+.step{ display:grid; grid-template-columns:40px 1fr 40px; align-items:center; background:#0D0E12; border:1px solid var(--line); border-radius:12px; overflow:hidden }
+.step button{ height:46px; border:0; background:transparent; color:var(--ink); font:700 20px/1 var(--latin); cursor:pointer }
+.step button:hover{ background:rgba(255,255,255,.06) }
+.step input{ width:100%; min-width:0; border:0; background:transparent; color:var(--ink); text-align:center; font:400 26px/1 var(--display); padding:8px 0; -moz-appearance:textfield }
+.step input::-webkit-inner-spin-button{ -webkit-appearance:none }
+.note{ margin:0; font:500 13px/1.6 var(--ko); color:var(--sub) }
+.note b{ color:var(--ink) }
+.btn{ font:700 15px/1 var(--ko); border-radius:12px; padding:14px 18px; border:0; cursor:pointer }
+.btn.main{ background:var(--lime); color:#101114 }
+.btn.ghost{ background:transparent; color:var(--ink); border:1px solid var(--line) }
+.btn.danger{ background:var(--warn); color:#101114 }
+.row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+.confirm{ display:grid; gap:10px; background:rgba(255,181,71,.08); border:1px solid rgba(255,181,71,.4); border-radius:12px; padding:14px }
+.stats{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px }
+.stat{ background:#0D0E12; border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:grid; gap:4px }
+.stat span{ font:700 12px/1 var(--ko); color:var(--sub) }
+.stat b{ font:400 30px/1 var(--display); font-variant-numeric:tabular-nums; letter-spacing:.02em }
+.stat b small{ font:700 13px/1 var(--ko); color:var(--sub); margin-left:4px }
+.stat.g b{ color:var(--gold) } .stat.p b{ color:var(--pink) }
+.bar{ height:8px; border-radius:99px; background:#0D0E12; overflow:hidden; border:1px solid var(--line) }
+.bar i{ display:block; height:100%; width:0; background:var(--lime); transition:width .4s }
+table{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }
+th, td{ text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); font-size:14px; white-space:nowrap }
+th{ font:700 12px/1 var(--ko); color:var(--sub) }
+td.code{ font:400 18px/1 var(--display); letter-spacing:.18em }
+.rank{ display:inline-block; font:700 12px/1 var(--ko); padding:5px 8px; border-radius:99px; color:#101114 }
+.rank.r1{ background:var(--gold) } .rank.r2{ background:var(--pink) }
+.sent{ font:700 12px/1 var(--ko); padding:7px 10px; border-radius:99px; border:1px solid var(--line); background:transparent; color:var(--sub); cursor:pointer }
+.sent.on{ background:var(--lime); color:#101114; border-color:transparent }
+.table-wrap{ overflow-x:auto }
+.empty{ color:var(--sub); font-size:14px; padding:6px 0 }
+.links a{ color:var(--lime); font-weight:700; word-break:break-all }
+#gate{ min-height:100dvh; display:grid; place-content:center; justify-items:center; gap:14px; padding:24px; text-align:center }
+#gate input{ font:400 30px/1 var(--display); letter-spacing:.3em; text-align:center; width:200px; padding:12px; border-radius:12px; border:1px solid var(--line); background:#0D0E12; color:var(--ink) }
+button:focus-visible, input:focus-visible, a:focus-visible{ outline:2px solid var(--lime); outline-offset:2px }
+</style>
+</head>
+<body>
+
+<form id="gate">
+  <h1>LUCKY <span>GRAB</span></h1>
+  <p class="note">진행자 비밀번호를 넣어 주세요</p>
+  <input id="pw" type="password" inputmode="numeric" autocomplete="off" aria-label="비밀번호">
+  <button class="btn main" type="submit">들어가기</button>
+  <p class="note" id="gateMsg"></p>
+</form>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1>LUCKY <span>GRAB</span> · 관리자</h1>
+    <span class="room" id="roomName"></span>
+  </header>
+
+  <section aria-labelledby="h-now">
+    <h2 id="h-now">지금 제비 상자 <small>참가자에게는 안 보여요</small></h2>
+    <div class="stats">
+      <div class="stat"><span>뽑은 사람</span><b id="sDrawn">0<small>/ 30명</small></b></div>
+      <div class="stat g"><span>남은 1등</span><b id="sLeft1">0<small>개</small></b></div>
+      <div class="stat p"><span>남은 2등</span><b id="sLeft2">0<small>개</small></b></div>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="sBar"></i></div>
+    <p class="note" id="sNote">큰 화면이 켜지면 여기에 바로 나타나요.</p>
+  </section>
+
+  <section aria-labelledby="h-set">
+    <h2 id="h-set">선물 설정</h2>
+    <div class="fields">
+      <div class="field"><label for="fPeople">예상 인원</label><div class="step"><button type="button" data-t="fPeople" data-d="-1" aria-label="인원 줄이기">−</button><input id="fPeople" type="number" min="1" max="999" value="30"><button type="button" data-t="fPeople" data-d="1" aria-label="인원 늘리기">+</button></div></div>
+      <div class="field"><label for="fFirst">1등 선물</label><div class="step"><button type="button" data-t="fFirst" data-d="-1" aria-label="1등 줄이기">−</button><input id="fFirst" type="number" min="0" max="99" value="1"><button type="button" data-t="fFirst" data-d="1" aria-label="1등 늘리기">+</button></div></div>
+      <div class="field"><label for="fSecond">2등 선물</label><div class="step"><button type="button" data-t="fSecond" data-d="-1" aria-label="2등 줄이기">−</button><input id="fSecond" type="number" min="0" max="99" value="3"><button type="button" data-t="fSecond" data-d="1" aria-label="2등 늘리기">+</button></div></div>
+    </div>
+    <p class="note" id="setNote"></p>
+    <div class="row"><button class="btn main" type="button" id="saveBtn">저장하고 새로 섞기</button></div>
+    <div class="confirm" id="confirmBox" hidden>
+      <p class="note"><b>지금까지 뽑은 제비가 모두 초기화되고 새로 섞여요.</b> 행사 도중이라면 남은 선물 수가 바뀔 수 있어요.</p>
+      <div class="row"><button class="btn danger" type="button" id="confirmYes">네, 새로 섞기</button><button class="btn ghost" type="button" id="confirmNo">그만두기</button></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-win">
+    <h2 id="h-win">당첨자 <small>카톡으로 온 확인 코드와 맞춰 보세요</small></h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>시간</th><th>이름</th><th>등수</th><th>확인 코드</th><th>선물</th></tr></thead>
+        <tbody id="winBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="winEmpty">아직 당첨자가 없어요.</p>
+  </section>
+
+  <section aria-labelledby="h-link">
+    <h2 id="h-link">주소</h2>
+    <p class="note links">큰 화면: <a id="lScreen" target="_blank" rel="noopener"></a><br>참가자 폰: <a id="lPlay" target="_blank" rel="noopener"></a></p>
+  </section>
+</div>
+
+<script type="module">
+const FB = {apiKey:"AIzaSyC_MlxFT3AFFb19l-XLwcKwxKtWam1g5To",authDomain:"teacher-letter-48131.firebaseapp.com",databaseURL:"https://teacher-letter-48131-default-rtdb.firebaseio.com",projectId:"teacher-letter-48131",storageBucket:"teacher-letter-48131.firebasestorage.app",messagingSenderId:"873083888112",appId:"1:873083888112:web:f157c8dc34f5c362dcbd35"};
+const ROOM = ((new URLSearchParams(location.search).get('room') || 'main').replace(/[^a-z0-9_-]/gi, '').slice(0, 24)) || 'main';
+const ROOT = 'rolling/luckygrab/' + ROOM;
+const PASSWORD = '1212';
+const $ = (id) => document.getElementById(id);
+
+// 비밀번호 (편지쓰기 관리자와 같음)
+let ok = false; try { ok = sessionStorage.getItem('lg-admin') === '1'; } catch (e) {}
+$('gate').addEventListener('submit', (e) => { e.preventDefault(); if ($('pw').value === PASSWORD) { try { sessionStorage.setItem('lg-admin', '1'); } catch (err) {} start(); } else { $('gateMsg').textContent = '비밀번호가 달라요'; } });
+if (ok) start(); else $('pw').focus();
+
+async function start() {
+  $('gate').hidden = true; $('app').hidden = false;
+  $('roomName').textContent = 'ROOM · ' + ROOM;
+  const base = location.href.split('#')[0].split('?')[0].replace(/admin\.html$/, '');
+  const q = ROOM === 'main' ? '' : '?room=' + ROOM;
+  $('lScreen').href = $('lScreen').textContent = base + q;
+  $('lPlay').href = $('lPlay').textContent = base + 'play.html' + q;
+
+  const [app, api] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js')]);
+  const db = api.getDatabase(app.initializeApp(FB));
+  const r = (p) => api.ref(db, ROOT + '/' + p);
+
+  // 현재 설정을 칸에 채움
+  const c = (await api.get(r('config'))).val();
+  if (c) { $('fPeople').value = c.people; $('fFirst').value = c.first; $('fSecond').value = c.second; }
+  const setNote = () => {
+    const n = +$('fPeople').value || 0, g = (+$('fFirst').value || 0) + (+$('fSecond').value || 0);
+    $('setNote').innerHTML = g > n ? '<b>선물이 인원보다 많아요.</b> 인원을 늘리거나 선물을 줄여 주세요.' : `<b>${n}명</b> 안에서 선물 <b>${g}개</b>가 무작위 순서로 모두 나가요. 공을 잡은 사람마다 제비를 한 장씩 뽑아요.`;
+  };
+  document.querySelectorAll('.step button').forEach((b) => b.addEventListener('click', () => {
+    const el = $(b.dataset.t); el.value = Math.max(+el.min, Math.min(+el.max, (+el.value || 0) + (+b.dataset.d))); setNote();
+  }));
+  ['fPeople', 'fFirst', 'fSecond'].forEach((id) => $(id).addEventListener('input', setNote)); setNote();
+
+  $('saveBtn').onclick = () => { $('confirmBox').hidden = false; };
+  $('confirmNo').onclick = () => { $('confirmBox').hidden = true; };
+  $('confirmYes').onclick = async () => {
+    const people = Math.max(1, +$('fPeople').value | 0), first = Math.max(0, +$('fFirst').value | 0), second = Math.max(0, +$('fSecond').value | 0);
+    await api.set(r('config'), { people: Math.max(people, first + second), first, second, seed: Date.now() });
+    $('confirmBox').hidden = true; $('sNote').textContent = '저장했어요. 큰 화면이 새로 섞은 제비를 씁니다.';
+  };
+
+  // 남은 제비 (큰 화면이 기록)
+  api.onValue(r('lottery'), (s) => {
+    const v = s.val(); if (!v || !v.deck) { $('sNote').textContent = '큰 화면을 한 번 켜 주세요. 켜지면 제비가 준비돼요.'; return; }
+    const rest = v.deck.slice(v.drawn), total = v.deck.length;
+    $('sDrawn').innerHTML = `${v.drawn}<small>/ ${total}명</small>`;
+    $('sLeft1').innerHTML = `${(rest.match(/1/g) || []).length}<small>개</small>`;
+    $('sLeft2').innerHTML = `${(rest.match(/2/g) || []).length}<small>개</small>`;
+    $('sBar').style.width = Math.min(100, v.drawn / Math.max(1, total) * 100) + '%';
+    $('sNote').textContent = v.drawn >= total ? '제비를 다 뽑았어요. 이제부터는 모두 NICE!가 나와요. 더 하려면 새로 섞어 주세요.' : '공을 잡은 사람만 제비를 뽑아요. 헛손질은 세지 않아요.';
+  });
+
+  // 당첨자 목록
+  api.onValue(r('winners'), (s) => {
+    const v = s.val() || {}, rows = Object.entries(v).sort((a, b) => b[1].at - a[1].at), body = $('winBody');
+    body.innerHTML = ''; $('winEmpty').hidden = rows.length > 0;
+    for (const [id, w] of rows) {
+      const tr = document.createElement('tr');
+      const t = new Date(w.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      tr.innerHTML = `<td></td><td></td><td><span class="rank r${w.rank}">${w.rank}등</span></td><td class="code"></td><td><button type="button" class="sent"></button></td>`;
+      tr.children[0].textContent = t; tr.children[1].textContent = w.name; tr.children[3].textContent = w.code;
+      const b = tr.querySelector('.sent'); b.textContent = w.sent ? '보냄 ✓' : '안 보냄'; b.classList.toggle('on', !!w.sent);
+      b.onclick = () => api.update(r('winners/' + id), { sent: !w.sent });
+      body.appendChild(tr);
+    }
+  });
+}
+</script>
+</body>
+</html>
