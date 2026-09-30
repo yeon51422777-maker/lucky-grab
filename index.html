@@ -185,7 +185,7 @@ addEventListener('unhandledrejection', (e) => showFail(String((e.reason && e.rea
   <div class="keys">
     <div><i style="background:var(--lime)"></i><b>연두</b> <kbd>←</kbd> <kbd>→</kbd> 이동 · <kbd>SPACE</kbd> 집기</div>
     <div id="p2keys"><i style="background:var(--pink)"></i><b>핑크</b> <kbd>A</kbd> <kbd>D</kbd> 이동 · <kbd>S</kbd> 집기 <span>(2인용)</span></div>
-    <div>20초 동안 안 누르면 저절로 집어요</div>
+    <div>집기 키를 꾹 누르면 더 깊이 내려가요 · 20초가 지나면 저절로 집어요</div>
   </div>
   <div class="pad" aria-label="연두 크레인 조종">
     <button type="button" id="padL" aria-label="연두 왼쪽">◀</button>
@@ -255,7 +255,7 @@ const CONFIG = {
   playSec: 20,          // 한 사람 조종 시간
   slipChance: 0.15,     // 올라가다 미끄러질 확률
   tries: 1,             // 폰으로 들어온 사람의 기회
-  lottery: { people: 30, first: 1, second: 3 },   // 기본값 — 실제 값은 관리자 페이지(admin.html)에서
+  lottery: { people: 30, gifts: 3 },   // 기본값 — 실제 값은 관리자 페이지(admin.html)에서 (당첨 / 꽝 두 가지)
   players: [
     { name: 'PLAYER 1', color: '#B8F400', keys: { left: 'ArrowLeft', right: 'ArrowRight', grab: 'Space' } },
     { name: 'PLAYER 2', color: '#FF5FD8', keys: { left: 'KeyA', right: 'KeyD', grab: 'KeyS' } },
@@ -655,7 +655,7 @@ function wakeNear(x, r) { for (const b of balls) { if (Math.abs(b.body.translati
 class Claw {
   constructor(i, cfg, x) {
     this.i = i; this.cfg = cfg; this.x = x; this.z = 0; this.tz = 0; this.vx = 0; this.y = Y_HOME; this.theta = IDLE_T;
-    this.state = 'aim'; this.t = 0; this.time = CONFIG.playSec; this.input = { left: false, right: false }; this.lastBeep = 99;
+    this.state = 'aim'; this.t = 0; this.time = CONFIG.playSec; this.input = { left: false, right: false, hold: false }; this.lastBeep = 99;
     this.held = null; this.slipped = false;
     this.player = null; this.lastGrab = 0; this.triesLeft = CONFIG.tries; this._st = ''; this._left = -1;
     const m = buildClawMesh(cfg.color); Object.assign(this, m); this.g.scale.setScalar(CS); scene.add(this.g);
@@ -715,9 +715,10 @@ class Claw {
       case 'drop':
         this.theta = approach(this.theta, OPEN_T, 2.6 * dt);
         this.z = approach(this.z, this.tz, 4 * dt);
-        this.y = approach(this.y, this.targetY, 6 * dt);
         wakeNear(this.x, 2.2);
-        if (this.y <= this.targetY + 1e-3) { this.state = 'close'; this.t = 0; }
+        if (this.y > this.targetY + 1e-3) this.y = approach(this.y, this.targetY, 6 * dt);   // 공 더미 윗면까지
+        else if (this.input.hold && this.y > 0.26 * CS + R_AVG * 1.15) this.y = approach(this.y, 0.26 * CS + R_AVG * 1.15, 2.2 * dt);   // 꾹 누르고 있으면 더 깊이
+        else { this.state = 'close'; this.t = 0; }
         break;
       case 'close':
         this.theta = approach(this.theta, HOLD_T, 2.2 * dt);
@@ -740,7 +741,7 @@ class Claw {
             const d = Math.hypot(p.x - g.x, p.y - g.y, p.z - g.z); if (d < pd) { pd = d; pick = b; }
           }
           if (pick) {
-            this.ticket = this.player ? Lottery.draw(this.player.name) : (Math.random() < 0.2 ? (Math.random() < 0.35 ? 1 : 2) : 0);
+            this.ticket = this.player ? Lottery.draw(this.player.name) : (Math.random() < 0.25 ? 1 : 0);
             this.held = pick; pick.held = true; this.holdT = 0;
             pick.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
             const p = pick.body.translation(); this.holdFrom = { x: p.x, y: p.y, z: p.z };
@@ -845,13 +846,12 @@ function makeTag(cfg) {
 
 /* ---------- 판정 · 결과 ---------- */
 function judgeTicket(ticket, b) {
-  if (ticket === 1) return { kind: 'win', rank: 1, label: '금색 공', color: TYPES.gold.color };
-  if (ticket === 2) return { kind: 'win', rank: 2, label: '핑크 공', color: TYPES.pink.color };
+  if (ticket > 0) return { kind: 'win', rank: 1, label: '금색 공', color: TYPES.gold.color };
   return { kind: 'nogift', label: TYPES[b.type].label, color: TYPES[b.type].color };
 }
 function morph(b, ticket) {
-  const t = ticket === 1 ? TYPES.gold : TYPES.pink, m = b.mesh.material;
-  b.mesh.geometry = GEO.ball; m.color.set(t.color); m.emissive.set(t.color); m.metalness = ticket === 1 ? 0.8 : 0; m.roughness = 0.26;
+  const t = TYPES.gold, m = b.mesh.material;
+  b.mesh.geometry = GEO.ball; m.color.set(t.color); m.emissive.set(t.color); m.metalness = 0.8; m.roughness = 0.26;
 }
 function showCd(claw, n) {
   if (!claw.cdEl) { claw.cdEl = document.createElement('div'); claw.cdEl.className = 'ov cd'; claw.cdEl.innerHTML = '<b></b>'; document.body.appendChild(claw.cdEl); }
@@ -864,7 +864,7 @@ function hideCd(claw) { if (claw.cdEl) claw.cdEl.hidden = true; }
 function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 function giftPop(pos, rank) {
   const [x, y] = toScreen(pos.x, pos.y, pos.z), el = document.createElement('div');
-  el.className = 'ov giftpop ' + (rank === 1 ? 'gold' : 'pink');
+  el.className = 'ov giftpop gold';
   el.innerHTML = '<i class="rays"></i><img src="assets/D.webp" alt="">';
   el.style.left = x + 'px'; el.style.top = y + 'px';
   document.body.appendChild(el); setTimeout(() => el.remove(), 3700);
@@ -874,17 +874,15 @@ function makeCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; 
 function showResult(claw, res) {
   const who = claw.player ? claw.player.name + '님' : claw.cfg.name;
   const T = {
-    win1:   ['1ST PRIZE', '1등 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
-    win2:   ['2ND PRIZE', '2등 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
-    win3:   ['GIFT', '선물 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
-    nogift: ['NICE CATCH', 'NICE!', '이번 공은 선물 공이 아니에요'],
-    slip:   ['ALMOST', 'SO CLOSE!', '공이 올라가다 미끄러졌어요'],
-    miss:   ['NEXT TIME', 'GOOD LUCK!', '아무것도 못 잡았어요'],
+    win1:   ['WINNER', '당첨!', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
+    nogift: ['NICE TRY', '다음 기회에~', '이번 공은 선물 공이 아니에요'],
+    slip:   ['SO CLOSE', '다음 기회에~', '공이 올라가다 미끄러졌어요'],
+    miss:   ['MISSED', '다음 기회에~', '아무것도 못 잡았어요'],
   };
-  const key = res.kind === 'win' ? 'win' + res.rank : res.kind;
+  const key = res.kind === 'win' ? 'win1' : res.kind;
   const [eyebrow, big, sub] = T[key];
   const card = document.createElement('div');
-  card.className = 'card' + (res.kind === 'win' ? ' win' + (res.rank === 2 ? ' second' : '') : '');
+  card.className = 'card' + (res.kind === 'win' ? ' win' : '');
   card.innerHTML = '<div class="eyebrow"></div><div class="big"></div><div class="who"></div><div class="sub"></div>';
   card.querySelector('.eyebrow').textContent = eyebrow;
   card.querySelector('.big').textContent = big; card.querySelector('.big').classList.toggle('en', /^[A-Z !]+$/.test(big));
@@ -1024,15 +1022,15 @@ addEventListener('keydown', (e) => {
   if (code === 'Digit2') return switchMode(2);
   const [c, act] = playerFor(code); if (!c) return;
   e.preventDefault();
-  if (act === 'grab') { if (!e.repeat) c.startDrop(); } else c.input[act] = true;
+  if (act === 'grab') { c.input.hold = true; if (!e.repeat) c.startDrop(); } else c.input[act] = true;
 });
-addEventListener('keyup', (e) => { const [c, act] = playerFor(keyCode(e)); if (c && act !== 'grab') c.input[act] = false; });
+addEventListener('keyup', (e) => { const [c, act] = playerFor(keyCode(e)); if (!c) return; if (act === 'grab') c.input.hold = false; else c.input[act] = false; });
 addEventListener('blur', () => claws.forEach((c) => { c.input.left = c.input.right = false; }));
 addEventListener('pointerdown', () => startSound());
 function hold(id, act) {
   const el = $(id);
-  const on = (e) => { e.preventDefault(); startSound(); const c = claws[0]; if (!c || !playing) return; if (act === 'grab') c.startDrop(); else c.input[act] = true; };
-  const off = () => { const c = claws[0]; if (c && act !== 'grab') c.input[act] = false; };
+  const on = (e) => { e.preventDefault(); startSound(); const c = claws[0]; if (!c || !playing) return; if (act === 'grab') { c.input.hold = true; c.startDrop(); } else c.input[act] = true; };
+  const off = () => { const c = claws[0]; if (!c) return; if (act === 'grab') c.input.hold = false; else c.input[act] = false; };
   el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointerleave', off); el.addEventListener('pointercancel', off);
 }
 hold('padL', 'left'); hold('padR', 'right'); hold('padG', 'grab');
@@ -1072,14 +1070,14 @@ const Net = {
 const Lottery = {
   cfg: { ...CONFIG.lottery, seed: 0 }, deck: '', drawn: 0,
   make(cfg) {
-    const people = Math.max(1, cfg.people | 0), first = Math.max(0, cfg.first | 0), second = Math.max(0, cfg.second | 0);
-    const d = []; for (let i = 0; i < first; i++) d.push(1); for (let i = 0; i < second; i++) d.push(2);
-    while (d.length < Math.max(people, first + second)) d.push(0);
+    const people = Math.max(1, cfg.people | 0), gifts = Math.max(0, (cfg.gifts ?? ((cfg.first | 0) + (cfg.second | 0))) | 0);
+    const d = []; for (let i = 0; i < gifts; i++) d.push(1);
+    while (d.length < Math.max(people, gifts)) d.push(0);
     for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
-    this.cfg = { people, first, second, seed: cfg.seed || Date.now() }; this.deck = d.join(''); this.drawn = 0; this.save();
+    this.cfg = { people, gifts, seed: cfg.seed || Date.now() }; this.deck = d.join(''); this.drawn = 0; this.save();
   },
-  adopt(v) { this.cfg = { people: v.people, first: v.first, second: v.second, seed: v.seed }; this.deck = v.deck || ''; this.drawn = v.drawn || 0; },
-  peek() { return +(this.deck[this.drawn] || 0); },
+  adopt(v) { this.cfg = { people: v.people, gifts: v.gifts ?? ((v.first | 0) + (v.second | 0)), seed: v.seed }; this.deck = (v.deck || '').replace(/2/g, '1'); this.drawn = v.drawn || 0; },
+  peek() { return +(this.deck[this.drawn] || 0) > 0 ? 1 : 0; },
   draw(name) { const v = this.peek(); if (this.drawn < this.deck.length) this.drawn++; this.save(); return v; },
   save() { Net.set('lottery', { ...this.cfg, deck: this.deck, drawn: this.drawn }); try { localStorage.setItem('lg-lot-' + ROOM, JSON.stringify({ ...this.cfg, deck: this.deck, drawn: this.drawn })); } catch (e) {} },
 };
@@ -1112,7 +1110,7 @@ function onInputs(v) {
   if (!playing) return;
   for (const c of claws) {
     if (!c.player) continue; const i = v['p' + c.player.slot]; if (!i) continue;
-    c.input.left = i.dir < 0; c.input.right = i.dir > 0;
+    c.input.left = i.dir < 0; c.input.right = i.dir > 0; c.input.hold = !!i.hold;
     if ((i.grab || 0) > c.lastGrab) { c.lastGrab = i.grab; c.startDrop(); }
   }
 }

@@ -69,6 +69,8 @@ button:focus-visible, input:focus-visible, a:focus-visible{ outline:3px solid va
 .grabwrap{ display:grid; justify-items:center; gap:6px }
 .grabwrap .grab{ width:clamp(112px, min(42vh, 36vw), 210px) }
 .grabwrap span{ font:400 18px/1 var(--display); letter-spacing:.14em; color:var(--pad-sub) }
+.grabwrap .gsub{ font:700 12px/1 var(--ko); color:var(--pad-sub); margin-top:-2px }
+.bye{ margin-top:6px }
 .hint{ margin:0; text-align:center; font:700 13px/1.4 var(--ko); color:var(--pad-sub) }
 .hint b{ color:var(--ink) }
 @media (orientation: portrait){
@@ -140,9 +142,10 @@ button:focus-visible, input:focus-visible, a:focus-visible{ outline:3px solid va
     <div class="grabwrap">
       <button class="imgbtn grab" id="bG" type="button" aria-label="집기"><img src="assets/B.webp" alt=""></button>
       <span>GRAB</span>
+      <small class="gsub">꾹 누르면 깊이</small>
     </div>
   </div>
-  <p class="hint"><b>큰 화면</b>을 보면서 움직이세요 · 시간이 끝나면 저절로 집어요</p>
+  <p class="hint"><b>큰 화면</b>을 보면서 움직이세요 · <b>GRAB을 꾹</b> 누르면 더 깊이 내려가요</p>
   <div class="busy" id="busy" hidden>
     <img src="assets/C.webp" alt="">
     <h2 class="big-ko">뽑는 중이에요</h2>
@@ -161,7 +164,7 @@ button:focus-visible, input:focus-visible, a:focus-visible{ outline:3px solid va
   </a>
   <p class="code" id="rCode" hidden>확인 코드<b></b></p>
   <p class="small" id="rNote"></p>
-  <button class="btn-ghost" id="againBtn" type="button">처음으로</button>
+  <p class="small bye">참여해 주셔서 고마워요 · 이 화면은 닫으셔도 돼요</p>
 </section>
 
 <script type="module">
@@ -177,7 +180,7 @@ const screens = ['sJoin', 'sWait', 'sCount', 'sPlay', 'sResult'];
 function show(id) { for (const s of screens) $(s).hidden = s !== id; current = id; }
 let current = 'sJoin';
 
-let api, db, state = {}, mySlot = 0, myName = '', players = {}, turn = {}, grabN = 0, dir = 0, lastResultAt = 0, unsub = [];
+let api, db, state = {}, mySlot = 0, myName = '', players = {}, turn = {}, grabN = 0, dir = 0, holding = false, lastResultAt = 0, unsub = [];
 const myId = (() => { try { let v = sessionStorage.getItem('lg-id'); if (!v) { v = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('lg-id', v); } return v; } catch (e) { return Math.random().toString(36).slice(2, 10); } })();
 try { $('nameIn').value = localStorage.getItem('lg-name') || ''; } catch (e) {}
 
@@ -270,10 +273,11 @@ function onTurn(t) {
   $('pTime').textContent = t.left != null ? t.left : '';
   $('pTimer').classList.toggle('hot', t.state === 'aim' && t.left <= 5);
 }
-function leave(msg) { mySlot = 0; for (const u of unsub) u(); unsub = []; show('sJoin'); refreshJoin(); if (msg) status(msg, true); }
+function leave(msg) {
+  if (current === 'sResult') { mySlot = 0; for (const u of unsub) u(); unsub = []; return; } mySlot = 0; for (const u of unsub) u(); unsub = []; show('sJoin'); refreshJoin(); if (msg) status(msg, true); }
 
 /* ---------- 조종 ---------- */
-function send() { if (mySlot && api) api.set(r('input/p' + mySlot), { dir, grab: grabN }).catch(() => {}); }
+function send() { if (mySlot && api) api.set(r('input/p' + mySlot), { dir, grab: grabN, hold: holding }).catch(() => {}); }
 function hold(el, d) {
   const on = (e) => { e.preventDefault(); el.classList.add('on'); dir = d; send(); };
   const off = () => { el.classList.remove('on'); if (dir === d) { dir = 0; send(); } };
@@ -281,10 +285,13 @@ function hold(el, d) {
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 hold($('bL'), -1); hold($('bR'), 1);
+// GRAB: 톡 누르면 공 더미 윗면까지, 꾹 누르고 있으면 손을 뗄 때까지 더 깊이
 $('bG').addEventListener('pointerdown', (e) => {
-  e.preventDefault(); const b = $('bG'); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 140);
-  dir = 0; grabN++; send(); if (navigator.vibrate) navigator.vibrate(25);
+  e.preventDefault(); $('bG').classList.add('on');
+  dir = 0; holding = true; grabN++; send(); if (navigator.vibrate) navigator.vibrate(25);
 });
+const grabUp = () => { $('bG').classList.remove('on'); if (holding) { holding = false; send(); } };
+$('bG').addEventListener('pointerup', grabUp); $('bG').addEventListener('pointercancel', grabUp); $('bG').addEventListener('pointerleave', grabUp);
 $('bG').addEventListener('contextmenu', (e) => e.preventDefault());
 
 /* ---------- 결과 ---------- */
@@ -292,13 +299,13 @@ function onResult(v) {
   if (!v || v.at === lastResultAt) return;
   lastResultAt = v.at;
   const T = {
-    win1: ['1ST PRIZE', '1등 당첨', 'assets/D.webp'], win2: ['2ND PRIZE', '2등 당첨', 'assets/D.webp'], win3: ['GIFT', '선물 당첨', 'assets/D.webp'],
-    nogift: ['NICE CATCH', 'NICE!', 'assets/C.webp'], slip: ['ALMOST', 'SO CLOSE!', 'assets/E.webp'], miss: ['NEXT TIME', 'GOOD LUCK!', 'assets/E.webp'],
+    win: ['WINNER', '당첨!', 'assets/D.webp'],
+    nogift: ['NICE TRY', '다음 기회에~', 'assets/E.webp'], slip: ['SO CLOSE', '다음 기회에~', 'assets/E.webp'], miss: ['MISSED', '다음 기회에~', 'assets/E.webp'],
   };
-  const key = v.kind === 'win' ? 'win' + (v.rank || 3) : v.kind;
+  const key = v.kind;
   const [eyebrow, big, img] = T[key] || T.miss;
   const win = v.kind === 'win', sc = $('sResult');
-  sc.classList.toggle('win', win); sc.classList.toggle('second', win && v.rank === 2);
+  sc.classList.toggle('win', win);
   $('rEyebrow').textContent = eyebrow; $('rBig').textContent = big; $('rBig').classList.toggle('en', /^[A-Z !]+$/.test(big)); $('rImg').src = img;
   const who = $('rWho'); who.querySelector('span').textContent = v.label ? `${myName}님 · ${v.label}` : `${myName}님`;
   who.querySelector('i').hidden = !v.label; who.style.setProperty('--b', BALL[v.label] || '#C9CED7');
@@ -307,15 +314,14 @@ function onResult(v) {
     $('rCode').querySelector('b').textContent = v.code;
     $('rNote').textContent = '버튼을 누르면 확인 문구가 복사돼요. 열린 채팅방에 붙여넣기만 하세요';
     $('rKakao').onclick = () => {
-      const text = `LUCKY GRAB ${big} · ${myName} · 확인코드 ${v.code}`;
+      const text = `LUCKY GRAB 당첨 · ${myName} · 확인코드 ${v.code}`;
       try { navigator.clipboard.writeText(text).catch(() => {}); } catch (e) {}
     };
   } else {
-    $('rNote').textContent = v.kind === 'nogift' ? '이번 공은 선물 공이 아니에요 · 참여해 줘서 고마워요' : v.kind === 'slip' ? '공이 올라가다 미끄러졌어요 · 참여해 줘서 고마워요' : '아무것도 못 잡았어요 · 참여해 줘서 고마워요';
+    $('rNote').textContent = v.kind === 'nogift' ? '이번 공은 선물 공이 아니에요' : v.kind === 'slip' ? '공이 올라가다 미끄러졌어요' : '아무것도 못 잡았어요';
   }
   show('sResult'); if (navigator.vibrate) navigator.vibrate(win ? [60, 60, 120] : 40);
 }
-$('againBtn').onclick = () => { mySlot = 0; for (const u of unsub) u(); unsub = []; show('sJoin'); refreshJoin(); };
 
 /* ---------- 화면 꺼짐 방지 ---------- */
 let lock = null;
