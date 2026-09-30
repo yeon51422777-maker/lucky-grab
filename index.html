@@ -44,6 +44,7 @@ html,body{ margin:0; height:100%; overflow:hidden; background:#2E3136; color:var
 .card{ display:grid; justify-items:center; gap:calc(var(--ur) * .008); min-width:calc(var(--ur) * .42); padding:calc(var(--ur) * .03) calc(var(--ur) * .06) calc(var(--ur) * .034); border-radius:calc(var(--ur) * .022); background:var(--glass); border:1px solid var(--line); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 1.4em 3em rgba(0,0,0,.28); text-align:center; animation:pop .5s cubic-bezier(.2,1.3,.4,1) both }
 .card .eyebrow{ font:700 calc(var(--ur) * .02)/1 var(--latin); letter-spacing:.28em; color:var(--lime); padding-left:.28em }
 .card .big{ font:900 calc(var(--ur) * .085)/1.08 var(--ko); letter-spacing:-.045em }
+.card .big.en{ font:400 calc(var(--ur) * .1)/1 var(--display); letter-spacing:.02em }
 .card .who{ display:flex; align-items:center; gap:.5em; font:700 calc(var(--ur) * .026)/1.3 var(--ko); letter-spacing:-.01em }
 .card .who i{ width:.8em; height:.8em; border-radius:50%; background:var(--b); box-shadow:inset -.12em -.15em .25em rgba(0,0,0,.25) }
 .card .sub{ font:500 calc(var(--ur) * .022)/1.4 var(--ko); color:var(--sub) }
@@ -95,7 +96,24 @@ html,body{ margin:0; height:100%; overflow:hidden; background:#2E3136; color:var
 .rd-modes button[aria-pressed="true"] small{ color:var(--paper) }
 .rd-modes button[aria-pressed="true"]::before{ content:'▶'; position:absolute; left:-3.4vmin; top:50%; transform:translateY(-50%); font-size:2.4vmin; color:var(--lime); animation:blink 1s steps(2, start) infinite }
 .rd-press{ margin:0; font:700 1.7vmin/1 var(--latin); letter-spacing:.34em; padding-left:.34em; color:var(--paper); animation:blink 1.2s steps(2, start) infinite }
-.rd-qrs{ display:flex; gap:4vmin; margin-top:1vmin }
+.rd-join{ display:flex; align-items:center; gap:4.4vmin; margin-top:1vmin }
+.rd-slots{ display:grid; gap:1.8vmin; min-width:34vmin }
+.slot{ display:grid; gap:.8vmin; text-align:left; padding:1.8vmin 2.6vmin 2vmin; border-radius:1.8vmin; border:.35vmin dashed var(--c); background:rgba(255,255,255,.04); transition:background .3s, color .3s }
+.slot .pn{ font:700 1.6vmin/1 var(--latin); letter-spacing:.3em; color:var(--c) }
+.slot b{ font:400 5.2vmin/1 var(--display); letter-spacing:.04em; animation:blink 1.4s steps(2, start) infinite }
+.slot small{ font:500 1.7vmin/1.3 var(--ko); color:var(--sub) }
+.slot.ready{ background:var(--c); color:var(--ink); border-style:solid; animation:slotIn .5s cubic-bezier(.2,1.4,.4,1) both }
+.slot.ready .pn{ color:var(--ink); opacity:.7 }
+.slot.ready b{ font:900 4.6vmin/1.1 var(--ko); letter-spacing:-.03em; animation:none }
+.slot.ready small{ color:var(--ink); font-weight:700 }
+@keyframes slotIn{ from{ transform:scale(.9); opacity:.4 } }
+.rd-url{ margin:0; font:600 1.7vmin/1 var(--latin); letter-spacing:.03em; color:var(--sub) }
+.rd-net{ margin:0; font:600 1.6vmin/1 var(--ko); color:#8BD450 }
+.rd-net.off{ color:#E8A33C }
+#count{ inset:0; z-index:15; display:grid; place-items:center; pointer-events:none; background:rgba(11,12,15,.28) }
+#count b{ font:400 40vmin/1 var(--display); color:var(--lime); text-shadow:0 0 6vmin rgba(184,244,0,.45) }
+#count b.pop{ animation:countPop .85s cubic-bezier(.2,1.2,.4,1) both }
+@keyframes countPop{ from{ transform:scale(1.8); opacity:0 } 60%{ opacity:1 } to{ transform:scale(1) } }
 .rd-qr{ margin:0; display:grid; justify-items:center; gap:1.4vmin; background:var(--paper); color:var(--ink); padding:2vmin 2.4vmin 2vmin; border-radius:2vmin; border-top:1.2vmin solid var(--c); box-shadow:0 3vmin 7vmin rgba(0,0,0,.35) }
 .rd-qr figcaption{ display:flex; align-items:center; gap:1vmin; font:400 3.4vmin/1 var(--display); letter-spacing:.08em }
 .rd-qr figcaption i{ width:1.6vmin; height:1.6vmin; border-radius:50%; background:var(--c); box-shadow:0 0 0 .3vmin rgba(0,0,0,.08) }
@@ -117,6 +135,8 @@ html,body{ margin:0; height:100%; overflow:hidden; background:#2E3136; color:var
   .rd-eyebrow, .rd-select, .rd-press{ font-size:2.5vmin } .rd-ko{ font-size:3.2vmin }
   .rd-qr figcaption{ font-size:4.6vmin } .rd-qr span{ font-size:2.6vmin }
   .rd-start{ font-size:7vmin } .rd-back{ font-size:4.4vmin }
+  .rd-join{ flex-direction:column } .rd-slots{ grid-auto-flow:column; min-width:0 }
+  .slot b{ font-size:7vmin } .slot.ready b{ font-size:6vmin } .slot .pn, .slot small, .rd-url, .rd-net{ font-size:2.4vmin }
 }
 
 #soundHint{ right:16px; top:16px; font:700 13px/1 var(--ko); background:rgba(14,15,19,.8); border:1px solid var(--line); border-radius:999px; padding:9px 14px; transition:opacity .4s }
@@ -193,13 +213,20 @@ addEventListener('unhandledrejection', (e) => showFail(String((e.reason && e.rea
     <p class="rd-eyebrow" id="scanEyebrow"></p>
     <h2>SCAN TO JOIN</h2>
     <p class="rd-ko" id="scanKo"></p>
-    <div class="rd-qrs" id="qrs"></div>
+    <div class="rd-join">
+      <figure class="rd-qr" id="joinQrFig" style="--c:#B8F400"><img id="joinQr" alt="참여 QR 코드"><figcaption>SCAN TO PLAY</figcaption></figure>
+      <div class="rd-slots" id="slots"></div>
+    </div>
+    <p class="rd-url" id="joinUrlText"></p>
     <div class="rd-actions">
       <button type="button" class="rd-back" id="backBtn">◀ BACK <kbd>ESC</kbd></button>
       <button type="button" class="rd-start" id="startBtn">START <kbd>SPACE</kbd></button>
     </div>
+    <p class="rd-net off" id="netStatus">● 폰 연결 준비 중…</p>
   </section>
 </div>
+
+<div class="ov" id="count" hidden><b id="countNum">3</b></div>
 
 <div class="ov" id="loading"><b>LUCKY GRAB</b><small>공을 채우는 중…</small></div>
 
@@ -222,13 +249,19 @@ const CONFIG = {
   tagline: 'Join the Lucky Grab and take your chance at winning a special reward!',
   playSec: 20,          // 한 사람 조종 시간
   slipChance: 0.15,     // 올라가다 미끄러질 확률
+  tries: 1,             // 폰으로 들어온 사람의 기회
   giftMode: 2,          // 1: 1등만, 2: 1·2등, 3: 잡으면 모두
   prizes: { gold: 2, pink: 5 },
   players: [
-    { name: '혜연', color: '#B8F400', keys: { left: 'ArrowLeft', right: 'ArrowRight', grab: 'Space' } },
-    { name: '참쌤', color: '#FF5FD8', keys: { left: 'KeyA', right: 'KeyD', grab: 'KeyS' } },
+    { name: 'PLAYER 1', color: '#B8F400', keys: { left: 'ArrowLeft', right: 'ArrowRight', grab: 'Space' } },
+    { name: 'PLAYER 2', color: '#FF5FD8', keys: { left: 'KeyA', right: 'KeyD', grab: 'KeyS' } },
   ],
 };
+
+// Firebase (편지쓰기와 같은 프로젝트, rolling 아래 경로) — room을 바꾸면 기록이 섞이지 않음
+const FB = {apiKey:"AIzaSyC_MlxFT3AFFb19l-XLwcKwxKtWam1g5To",authDomain:"teacher-letter-48131.firebaseapp.com",databaseURL:"https://teacher-letter-48131-default-rtdb.firebaseio.com",projectId:"teacher-letter-48131",storageBucket:"teacher-letter-48131.firebasestorage.app",messagingSenderId:"873083888112",appId:"1:873083888112:web:f157c8dc34f5c362dcbd35"};
+const ROOM = ((new URLSearchParams(location.search).get('room') || 'main').replace(/[^a-z0-9_-]/gi, '').slice(0, 24)) || 'main';
+const ROOT = 'rolling/luckygrab/' + ROOM;
 
 const $ = (id) => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -523,7 +556,7 @@ const OPEN_T = -0.58, IDLE_T = -0.18, HOLD_T = 0.02, SHUT_T = 0.26;
    물리 · 세계 만들기 (모드가 바뀌면 통째로 다시 만듦)
    ========================================================= */
 await RAPIER.init().catch((e) => { showFail('물리 엔진(WebAssembly)이 이 창에서 막혀 있어요. 크롬에서 game/index.html을 열어 주세요. (' + e.message + ')'); throw e; });
-let world = null, machine = null, balls = [], sun = null;
+let world = null, machine = null, balls = [], sun = null, ballTarget = 0;
 const claws = [];
 let playing = false;   // 시작 화면에서는 멈춤
 
@@ -560,7 +593,7 @@ function buildMachine() {
   outer.material.map.repeat.set(1 / 16, 1 / 16);
   // 오른쪽 벽 QR 카드
   const qw = clamp(IW * 0.17, 1.35, 2.5), qh = qw * 1240 / 1024;
-  const qrTex = qrCardTexture(/^https?:/.test(location.href) ? location.href.split('#')[0] : 'LUCKY GRAB');
+  const qrTex = qrCardTexture(joinUrl());
   const qrMat = new THREE.MeshStandardMaterial({ map: qrTex, emissive: '#FFFFFF', emissiveMap: qrTex, emissiveIntensity: 0.32, roughness: 0.6, transparent: true });
   const qrm = add(new THREE.PlaneGeometry(qw, qh), qrMat, [IW / 2 - qw / 2 - Math.min(0.9, IW * 0.06), IH - qh / 2 - 0.75, -ID / 2 + 0.03]);
   qrm.castShadow = false;
@@ -614,7 +647,7 @@ function clearBalls() { for (const b of balls) { scene.remove(b.mesh); if (b.mes
 function fillBalls() {
   for (const b of [...balls]) removeBall(b);
   const vol = (4 / 3) * Math.PI * R_AVG ** 3;
-  const n = Math.min(260, Math.round(0.52 * IW * ID * IH * PILE / vol));
+  const n = Math.min(260, Math.round(0.52 * IW * ID * IH * PILE / vol)); ballTarget = n;
   const list = [];
   for (let i = 0; i < n; i++) list.push(pickFiller());
   const prizes = []; for (let i = 0; i < CONFIG.prizes.gold; i++) prizes.push('gold'); for (let i = 0; i < CONFIG.prizes.pink; i++) prizes.push('pink');
@@ -643,6 +676,7 @@ class Claw {
     this.i = i; this.cfg = cfg; this.x = x; this.z = 0; this.tz = 0; this.vx = 0; this.y = Y_HOME; this.theta = IDLE_T;
     this.state = 'aim'; this.t = 0; this.time = CONFIG.playSec; this.input = { left: false, right: false }; this.lastBeep = 99;
     this.held = null; this.slipped = false;
+    this.player = null; this.lastGrab = 0; this.triesLeft = CONFIG.tries; this._st = ''; this._left = -1;
     const m = buildClawMesh(cfg.color); Object.assign(this, m); this.g.scale.setScalar(CS); scene.add(this.g);
     this.body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, this.y, 0));
     this.cols = [world.createCollider(RAPIER.ColliderDesc.ball(0.3 * CS).setTranslation(0, 0.05 * CS, 0), this.body)];
@@ -756,8 +790,25 @@ class Claw {
       case 'rest':
         this.z = approach(this.z, 0, 1.5 * dt);
         this.theta = approach(this.theta, this.t < 1.2 ? OPEN_T : IDLE_T, 1.5 * dt);
-        if (this.t > 2.8) { this.state = 'aim'; this.slipped = false; this.time = CONFIG.playSec; this.lastBeep = 99; }
+        if (this.t > 2.8) {
+          this.slipped = false;
+          if (this.player) {   // 폰으로 들어온 사람은 기회만큼만
+            this.triesLeft--;
+            if (this.triesLeft > 0) { this.state = 'aim'; this.time = CONFIG.playSec; this.lastBeep = 99; }
+            else { this.state = 'done'; checkRoundOver(); }
+          } else if (remoteGame) this.state = 'idle';
+          else { this.state = 'aim'; this.time = CONFIG.playSec; this.lastBeep = 99; }
+        }
         break;
+      case 'done': case 'idle':
+        this.z = approach(this.z, 0, 1.5 * dt);
+        this.theta = approach(this.theta, IDLE_T, 1.5 * dt);
+        break;
+    }
+    if (this.player) {   // 폰에 내 차례 상태와 남은 시간을 알려줌
+      const st = !playing ? 'wait' : this.state === 'aim' ? 'aim' : (this.state === 'done' || this.state === 'idle') ? 'done' : 'busy';
+      const left = Math.max(0, Math.ceil(this.time));
+      if (st !== this._st || (st === 'aim' && left !== this._left)) { this._st = st; this._left = left; Net.set('turn/p' + this.player.slot, { state: st, left }); }
     }
     if (this.held) {   // 잡은 공은 집게를 따라온다
       const b = this.held, g = this.grabPoint(b.r);
@@ -774,6 +825,10 @@ class Claw {
     b.held = false; this.held = null; this.theta = OPEN_T; if (slip) Sound.miss();
   }
   rest() { this.state = 'rest'; this.t = 0; }
+  setPlayer(pl) {
+    this.player = pl; this.lastGrab = 0; this.triesLeft = CONFIG.tries; this._st = ''; this._left = -1;
+    this.tag.querySelector('.nm').textContent = pl ? pl.name : this.cfg.name;
+  }
   updateTag() {
     const el = this.tag, v = new THREE.Vector3(this.x + 0.95 * CS, this.y + 1.05 * CS, this.z).project(camera);
     el.style.transform = `translate(${(v.x + 1) / 2 * innerWidth}px, ${(1 - v.y) / 2 * innerHeight}px) translate(-50%,-50%)`;
@@ -802,15 +857,16 @@ function judge(b) {
   return { kind: 'nogift', label, color };
 }
 const resultLog = [];
+function makeCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)]; return c; }
 function showResult(claw, res) {
-  const who = claw.cfg.name + '님';
+  const who = claw.player ? claw.player.name + '님' : claw.cfg.name;
   const T = {
     win1:   ['1ST PRIZE', '1등 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
     win2:   ['2ND PRIZE', '2등 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
     win3:   ['GIFT', '선물 당첨', '폰에서 ‘카톡으로 선물 받기’를 눌러 주세요'],
-    nogift: ['NICE CATCH', '잡았어요', '이번 공은 선물 공이 아니에요'],
-    slip:   ['SO CLOSE', '아깝다', '공이 올라가다 미끄러졌어요'],
-    miss:   ['MISSED', '아깝다', '아무것도 못 잡았어요'],
+    nogift: ['NICE CATCH', 'NICE!', '이번 공은 선물 공이 아니에요'],
+    slip:   ['ALMOST', 'SO CLOSE!', '공이 올라가다 미끄러졌어요'],
+    miss:   ['NEXT TIME', 'GOOD LUCK!', '아무것도 못 잡았어요'],
   };
   const key = res.kind === 'win' ? 'win' + res.rank : res.kind;
   const [eyebrow, big, sub] = T[key];
@@ -818,12 +874,13 @@ function showResult(claw, res) {
   card.className = 'card' + (res.kind === 'win' ? ' win' + (res.rank === 2 ? ' second' : '') : '');
   card.innerHTML = '<div class="eyebrow"></div><div class="big"></div><div class="who"></div><div class="sub"></div>';
   card.querySelector('.eyebrow').textContent = eyebrow;
-  card.querySelector('.big').textContent = big;
+  card.querySelector('.big').textContent = big; card.querySelector('.big').classList.toggle('en', /^[A-Z !]+$/.test(big));
   const w = card.querySelector('.who');
   if (res.label) { const i = document.createElement('i'); i.style.setProperty('--b', res.color); w.append(i); }
   w.append(res.label ? `${who} · ${res.label}` : who);
   card.querySelector('.sub').textContent = sub;
-  $('results').appendChild(card); resultLog.push(`${claw.cfg.name}: ${big} ${res.label || ''}`);
+  $('results').appendChild(card); resultLog.push(`${claw.player ? claw.player.name : claw.cfg.name}: ${big} ${res.label || ''}`);
+  if (claw.player) Net.set('result/p' + claw.player.slot, { kind: res.kind, rank: res.rank || 0, label: res.label || '', name: claw.player.name, code: makeCode(), at: Date.now() });
   if (res.kind === 'win') Sound.win(); else if (res.kind === 'nogift') Sound.meh(); else if (res.kind === 'miss') Sound.miss();
   setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 420); }, 3400);
 }
@@ -938,7 +995,8 @@ addEventListener('keydown', (e) => {
     const scan = !$('stepScan').hidden;
     if (code === 'Digit1' || code === 'Numpad1') { e.preventDefault(); return pickMode(1); }
     if (code === 'Digit2' || code === 'Numpad2') { e.preventDefault(); return pickMode(2); }
-    if (scan && (code === 'Space' || code === 'Enter' || code === 'NumpadEnter')) { e.preventDefault(); return hideReady(); }
+    if (scan && (code === 'Space' || code === 'Enter' || code === 'NumpadEnter')) { e.preventDefault(); return startCountdown(); }
+    if (counting && code === 'Escape') { e.preventDefault(); return showReady(); }
     if (scan && (code === 'Escape' || code === 'Backspace')) { e.preventDefault(); return showStep('select'); }
     return;
   }
@@ -974,46 +1032,138 @@ $('bMode1').onclick = () => switchMode(1); $('bMode2').onclick = () => switchMod
 addEventListener('hashchange', () => { if (location.hash === '#solo') switchMode(1); else if (location.hash === '#duo') switchMode(2); });
 $('tagline').textContent = CONFIG.tagline; $('logo').textContent = CONFIG.title;
 
-/* ---------- 시작 화면: ① 인원 선택 → ② QR ---------- */
-// 참여 주소는 같고, 2인일 때는 끝에 p=1 / p=2만 달라서 각자 자기 색 크레인으로 들어감
-function joinUrl(p) {
-  const base = /^https?:/.test(location.href) ? location.href.split('#')[0].split('?')[0] : 'https://example.com/';
-  return new URL('play.html?p=' + p, base).href;
+/* =========================================================
+   폰 연결 (Firebase) — 큰 화면이 심판: 자리 확인, 폰 입력 받기, 결과 보내기
+   ========================================================= */
+let phase = 'select', joined = {}, counting = false, remoteGame = false;
+const Net = {
+  ok: false, api: null, db: null,
+  async init() {
+    try {
+      const [app, dbm] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js')]);
+      this.api = dbm; this.db = dbm.getDatabase(app.initializeApp(FB)); this.ok = true;
+      dbm.onValue(dbm.ref(this.db, '.info/connected'), (s) => setNetStatus(s.val() === true));
+      dbm.onValue(this.ref('players'), (s) => onPlayers(s.val() || {}));
+      dbm.onValue(this.ref('input'), (s) => onInputs(s.val() || {}));
+      if (phase === 'select') resetRoom({ phase: 'select' }); else if (phase === 'join') resetRoom({ phase: 'join', mode: MODE });
+    } catch (e) { console.warn('Firebase에 연결하지 못했어요 → 키보드로만', e); setNetStatus(false); }
+  },
+  ref(p) { return this.api.ref(this.db, ROOT + (p ? '/' + p : '')); },
+  set(p, v) { if (this.ok) this.api.set(this.ref(p), v).catch(() => {}); },
+  update(p, v) { if (this.ok) this.api.update(this.ref(p), v).catch(() => {}); },
+};
+function setNetStatus(ok) {
+  const el = $('netStatus'); if (!el) return;
+  el.textContent = ok ? '● 폰 연결 준비됨' : '● 폰 연결 안 됨 · 키보드로 해 볼 수 있어요';
+  el.classList.toggle('off', !ok);
+}
+function resetRoom(next) { Net.update('', { state: { ...next, at: Date.now() }, players: null, input: null, result: null, turn: null }); }
+function allJoined() { for (let s = 1; s <= MODE; s++) if (!joined['p' + s]) return false; return true; }
+function onPlayers(v) {
+  joined = v || {};
+  if (phase !== 'join' && phase !== 'countdown') return;
+  claws.forEach((c, k) => c.setPlayer(joined['p' + (k + 1)] ? { ...joined['p' + (k + 1)], slot: k + 1 } : null));
+  renderSlots();
+  if (phase === 'join' && allJoined()) startCountdown();
+}
+function onInputs(v) {
+  if (!playing) return;
+  for (const c of claws) {
+    if (!c.player) continue; const i = v['p' + c.player.slot]; if (!i) continue;
+    c.input.left = i.dir < 0; c.input.right = i.dir > 0;
+    if ((i.grab || 0) > c.lastGrab) { c.lastGrab = i.grab; c.startDrop(); }
+  }
+}
+function checkRoundOver() {
+  if (!remoteGame || !claws.every((c) => c.state === 'done' || c.state === 'idle')) return;
+  setTimeout(newRound, 3800);
+}
+function resetClaws() {
+  for (const c of claws) { c.setPlayer(null); if (c.state === 'done' || c.state === 'idle') c.state = 'aim'; c.time = CONFIG.playSec; c.lastBeep = 99; c.input.left = c.input.right = false; }
+}
+function newRound() {   // 같은 인원으로 다음 사람을 받음
+  playing = false; remoteGame = false; resetClaws();
+  if (balls.length < ballTarget * 0.75) refill();
+  $('ready').classList.remove('hide'); showStep('scan');
+}
+
+/* ---------- 시작 화면: ① 인원 선택 → ② QR 하나 + 자리 카드 ---------- */
+function joinUrl() {
+  const here = location.href.split('#')[0].split('?')[0];
+  const base = /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname) ? here : 'https://yeon51422777-maker.github.io/lucky-grab/';
+  const u = new URL('play.html', base); if (ROOM !== 'main') u.searchParams.set('room', ROOM);
+  return u.href;
 }
 function qrImg(text) { try { const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createDataURL(10, 0); } catch (e) { return ''; } }
 function renderScan() {
-  const n = MODE === 1 ? 1 : 2;
-  $('scanEyebrow').textContent = n === 1 ? '1 PLAYER · 세로 화면' : '2 PLAYERS · 가로 화면';
-  $('scanKo').textContent = n === 1 ? '폰 카메라로 QR을 찍고 참여하세요' : '각자 자기 색 QR을 찍으면 그 색 크레인을 조종해요';
-  const box = $('qrs'); box.innerHTML = '';
-  for (let k = 0; k < n; k++) {
-    const pl = CONFIG.players[k], f = document.createElement('figure');
-    f.className = 'rd-qr'; f.style.setProperty('--c', pl.color);
-    f.style.setProperty('--qs', n === 1 ? 'min(40vmin, 52vw)' : 'min(30vmin, 34vw)');
-    f.innerHTML = `<figcaption><i></i>PLAYER ${k + 1}</figcaption><img alt="PLAYER ${k + 1} QR 코드"><span>${k === 0 ? '연두' : '핑크'} 크레인</span>`;
-    f.querySelector('img').src = qrImg(joinUrl(k + 1));
-    box.appendChild(f);
+  $('scanEyebrow').textContent = MODE === 1 ? '1 PLAYER · 세로 화면' : '2 PLAYERS · 가로 화면';
+  $('scanKo').textContent = MODE === 1 ? '폰 카메라로 QR을 찍고 이름을 넣으면 바로 시작해요' : '두 사람 모두 같은 QR을 찍어요 · 먼저 들어온 사람이 연두, 다음 사람이 핑크';
+  const url = joinUrl();
+  $('joinQr').src = qrImg(url);
+  $('joinQrFig').style.setProperty('--qs', MODE === 1 ? 'min(36vmin, 48vw)' : 'min(32vmin, 40vw)');
+  $('joinUrlText').textContent = url.replace(/^https?:\/\//, '');
+  renderSlots();
+}
+function renderSlots() {
+  const box = $('slots'); if (!box) return; box.innerHTML = '';
+  for (let s = 1; s <= MODE; s++) {
+    const pl = joined['p' + s], cfg = CONFIG.players[s - 1], ko = s === 1 ? '연두' : '핑크', d = document.createElement('div');
+    d.className = 'slot' + (pl ? ' ready' : ''); d.style.setProperty('--c', cfg.color);
+    d.innerHTML = '<span class="pn"></span><b></b><small></small>';
+    d.querySelector('.pn').textContent = 'PLAYER ' + s;
+    d.querySelector('b').textContent = pl ? pl.name : 'WAITING';
+    d.querySelector('small').textContent = pl ? `✓ READY · ${ko} 크레인` : `${ko} 크레인 · 기다리는 중`;
+    box.appendChild(d);
   }
 }
 function showStep(which) {
   $('stepSelect').hidden = which !== 'select';
   $('stepScan').hidden = which !== 'scan';
-  if (which === 'scan') { renderScan(); $('startBtn').focus({ preventScroll: true }); }
-  else { const b = document.querySelector(`.rd-modes [data-mode="${MODE}"]`); if (b) b.focus({ preventScroll: true }); }
+  counting = false; $('count').hidden = true;
+  if (which === 'scan') {
+    phase = 'join'; joined = {}; resetClaws(); resetRoom({ phase: 'join', mode: MODE });
+    renderScan(); $('startBtn').focus({ preventScroll: true });
+  } else {
+    phase = 'select'; joined = {}; resetClaws(); resetRoom({ phase: 'select' });
+    const b = document.querySelector(`.rd-modes [data-mode="${MODE}"]`); if (b) b.focus({ preventScroll: true });
+  }
 }
 function pickMode(mode) { startSound(); if (mode !== MODE) build(mode); showStep('scan'); }
 function showReady() {
-  playing = false;
-  for (const c of claws) { c.input.left = c.input.right = false; if (c.state === 'aim') { c.time = CONFIG.playSec; c.lastBeep = 99; } }
+  playing = false; remoteGame = false;
   $('ready').classList.remove('hide'); showStep('select');
 }
+function startCountdown() {
+  if (counting) return; counting = true; phase = 'countdown'; startSound();
+  $('ready').classList.add('hide');
+  const el = $('count'), b = $('countNum'); el.hidden = false;
+  const seq = ['3', '2', '1', 'GO!']; let i = 0;
+  const tick = () => {
+    if (!counting) return;
+    const v = seq[i];
+    b.textContent = v; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+    Sound.beep(v === 'GO!');
+    Net.set('state', { phase: 'countdown', mode: MODE, n: v, at: Date.now() });
+    i++;
+    if (i < seq.length) setTimeout(tick, 900);
+    else setTimeout(() => { if (counting) { el.hidden = true; hideReady(); } }, 700);
+  };
+  tick();
+}
 function hideReady() {
-  startSound();
-  for (const c of claws) { c.time = CONFIG.playSec; c.lastBeep = 99; }
-  playing = true; $('ready').classList.add('hide'); canvas.focus({ preventScroll: true });
+  startSound(); counting = false; $('count').hidden = true;
+  remoteGame = claws.some((c) => c.player);
+  for (const c of claws) {
+    c.time = CONFIG.playSec; c.lastBeep = 99; c.triesLeft = CONFIG.tries;
+    if (remoteGame && !c.player) c.state = 'idle'; else if (c.state === 'idle' || c.state === 'done') c.state = 'aim';
+  }
+  playing = true; phase = 'play'; Net.set('state', { phase: 'play', mode: MODE, at: Date.now() });
+  $('ready').classList.add('hide'); canvas.focus({ preventScroll: true });
 }
 document.querySelectorAll('.rd-modes button').forEach((b) => { b.onclick = () => pickMode(+b.dataset.mode); });
-$('startBtn').onclick = hideReady; $('backBtn').onclick = () => showStep('select'); $('bReady').onclick = showReady;
+$('startBtn').onclick = startCountdown; $('backBtn').onclick = () => showStep('select'); $('bReady').onclick = showReady;
 
 /* =========================================================
    시작
@@ -1026,10 +1176,11 @@ setupComposer(); applyQuality();
 build(startMode);
 $('loading').classList.add('gone');
 showReady();
+Net.init();
 
 // 시험용: 화면 갱신과 상관없이 시뮬레이션을 n프레임 진행
 window.__grab = {
-  CONFIG, claws, resultLog, get balls() { return balls; }, build,
+  CONFIG, claws, resultLog, get balls() { return balls; }, build, Net, get phase() { return phase; },
   step(n) { for (let i = 0; i < n; i++) { for (const c of claws) c.update(1 / 60); world.step(); updateSparks(1 / 60); } syncBalls(); layoutOverlay(); draw(); },
 };
 
@@ -1042,7 +1193,7 @@ renderer.setAnimationLoop(() => {
   if (n === 4) acc = 0;
   syncBalls(); updateSparks(dt); layoutOverlay();
   Sound.fast = claws.some((c) => c.state === 'aim' && c.time <= 5);
-  $('join').style.opacity = claws.some((c) => c.state !== 'aim') ? 0.4 : 1;
+  $('join').style.opacity = playing && claws.some((c) => c.state !== 'aim' && c.state !== 'idle') ? 0.4 : 1;
   draw();
 });
 </script>

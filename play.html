@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111216">
+<title>LUCKY GRAB · 조종기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700&family=Noto+Sans+KR:wght@500;700;900&display=swap">
+<style>
+/* 참가자 폰 — QR로 들어와 이름 넣고, 자기 색 크레인을 조종 */
+:root{
+  --lime:#B8F400; --pink:#FF5FD8; --c:var(--lime); --ink:#101114; --paper:#FFFFFF; --night:#111216; --sub:#A2A6B1;
+  --pad:#DEDEEA; --pad-hi:#F4F4F9; --pad-sub:#6C6C80; --rose:#F6D4CF; --rose-hi:#FCEAE6; --rose-ink:#3B2220; --rose-sub:#8A5E58;
+  --kakao:#FEE500; --kakao-ink:#191600; --gold:#B98A12;
+  --display:'Anton','Archivo',sans-serif; --latin:'Archivo','Noto Sans KR',sans-serif; --ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  color-scheme:dark;
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+[hidden]{ display:none !important }
+html,body{ margin:0; height:100%; overflow:hidden; background:var(--night); color:var(--paper); font-family:var(--ko); overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none }
+.scr{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center;
+  padding:max(22px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left)) }
+.eyebrow{ margin:0; font:700 12px/1 var(--latin); letter-spacing:.34em; padding-left:.34em; color:var(--c) }
+.logo{ margin:0; font:400 clamp(64px, 22vmin, 120px)/.9 var(--display); letter-spacing:.01em; color:var(--paper) }
+.big-ko{ margin:0; font:900 clamp(30px, 9vmin, 46px)/1.15 var(--ko); letter-spacing:-.04em }
+.big-ko.en{ font:400 clamp(52px, 16vmin, 84px)/1 var(--display); letter-spacing:.02em }
+.line{ margin:0; font:700 16px/1.45 var(--ko) }
+.small{ margin:0; font:500 13px/1.5 var(--ko); opacity:.72 }
+.btn-lime{ font:400 26px/1 var(--display); letter-spacing:.1em; color:var(--ink); background:var(--lime); border:0; border-radius:14px; padding:16px 0; width:100%; box-shadow:0 5px 0 #6F9400; cursor:pointer }
+.btn-lime:active{ transform:translateY(4px); box-shadow:0 1px 0 #6F9400 }
+.btn-lime:disabled{ opacity:.35; box-shadow:none }
+.btn-ghost{ font:700 15px/1 var(--ko); color:inherit; background:rgba(0,0,0,.08); border:1.5px solid currentColor; border-radius:99px; padding:12px 22px; cursor:pointer; opacity:.8 }
+button:focus-visible, input:focus-visible, a:focus-visible{ outline:3px solid var(--paper); outline-offset:3px }
+
+/* 1. 입장 */
+#sJoin .join{ width:min(340px, 100%); display:grid; gap:10px; margin-top:14px; text-align:left }
+#sJoin label{ font:700 13px/1 var(--ko); color:var(--sub); padding-left:4px }
+#nameIn{ font:900 22px/1 var(--ko); color:var(--ink); background:var(--paper); border:0; border-radius:12px; padding:15px 16px; width:100%; -webkit-user-select:text; user-select:text }
+#joinStatus{ min-height:3em; color:var(--sub) }
+#joinStatus.warn{ color:#FFB547 }
+
+/* 2. 기다리기 · 카운트다운 — 화면 전체가 내 색 */
+.colored{ background:var(--c); color:var(--ink) }
+.colored .eyebrow{ color:var(--ink); opacity:.7 }
+.pn{ margin:0; font:400 clamp(54px, 18vmin, 96px)/.9 var(--display); letter-spacing:.02em }
+.rot{ width:clamp(90px, 26vmin, 140px); height:auto; margin:6px 0; background:rgba(255,255,255,.7); border-radius:50%; padding:12px }
+#cNum{ font:400 clamp(160px, 55vmin, 320px)/1 var(--display) }
+#cNum.pop{ animation:pop .8s cubic-bezier(.2,1.3,.4,1) both }
+@keyframes pop{ from{ transform:scale(1.6); opacity:0 } }
+
+/* 3. 조종기 */
+.ctrl{ position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr auto; background:radial-gradient(70% 90% at 50% 45%, var(--pad-hi), var(--pad)); color:var(--ink);
+  padding:max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)) }
+.bar{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px }
+.chip{ justify-self:start; display:inline-flex; align-items:center; gap:7px; font:700 13px/1 var(--ko); background:rgba(255,255,255,.75); padding:8px 12px; border-radius:99px; max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+.chip i{ flex:none; width:11px; height:11px; border-radius:50%; background:var(--c); box-shadow:0 0 0 2px rgba(0,0,0,.12) }
+.timer{ display:flex; align-items:baseline; gap:4px; font-variant-numeric:tabular-nums }
+.timer b{ font:400 44px/1 var(--display) }
+.timer small{ font:700 11px/1 var(--latin); letter-spacing:.2em; color:var(--pad-sub) }
+.timer.hot b{ color:#E0332B }
+.brand{ justify-self:end; font:400 16px/1 var(--display); letter-spacing:.06em; color:var(--pad-sub) }
+.pads{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 2vw }
+.arrows{ display:flex; gap:clamp(12px, 3vw, 26px) }
+.imgbtn{ border:0; padding:0; background:none; cursor:pointer; touch-action:none; display:block; transition:transform .06s }
+.imgbtn img{ display:block; width:100%; height:auto; pointer-events:none; -webkit-user-drag:none; filter:drop-shadow(0 8px 10px rgba(60,60,110,.22)) }
+.imgbtn.on{ transform:translateY(4px) scale(.94); filter:brightness(.96) }
+.arrows .imgbtn{ width:clamp(84px, min(30vh, 26vw), 150px) }
+.flip img{ transform:scaleX(-1) }
+.grabwrap{ display:grid; justify-items:center; gap:6px }
+.grabwrap .grab{ width:clamp(112px, min(42vh, 36vw), 210px) }
+.grabwrap span{ font:400 18px/1 var(--display); letter-spacing:.14em; color:var(--pad-sub) }
+.hint{ margin:0; text-align:center; font:700 13px/1.4 var(--ko); color:var(--pad-sub) }
+.hint b{ color:var(--ink) }
+@media (orientation: portrait){
+  .pads{ flex-direction:column; justify-content:flex-end; gap:34px; padding-bottom:8px }
+  .arrows{ width:100%; justify-content:space-between }
+  .arrows .imgbtn{ width:clamp(96px, 34vw, 150px) }
+  .grabwrap .grab{ width:clamp(130px, 46vw, 200px) }
+}
+.busy{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgba(17,18,22,.93); color:var(--paper); text-align:center }
+.busy img{ width:clamp(80px, 22vmin, 120px); height:auto; animation:sway 2.4s ease-in-out infinite; transform-origin:50% 0 }
+@keyframes sway{ 0%,100%{ transform:rotate(-5deg) } 50%{ transform:rotate(5deg) } }
+
+/* 4. 결과 */
+#sResult{ background:radial-gradient(90% 70% at 50% 40%, var(--pad-hi), var(--pad)); color:var(--ink) }
+#sResult.win{ background:radial-gradient(90% 70% at 50% 40%, var(--rose-hi), var(--rose)); color:var(--rose-ink) }
+#sResult .eyebrow{ color:var(--pad-sub) }
+#sResult.win .eyebrow{ color:var(--gold) }
+#sResult.win.second .eyebrow{ color:#C22BA6 }
+.rimg{ width:clamp(130px, 40vmin, 220px); height:auto; margin:4px 0 }
+.who{ display:inline-flex; align-items:center; gap:8px }
+.who i{ width:13px; height:13px; border-radius:50%; background:var(--b, #999); box-shadow:inset -2px -2px 3px rgba(0,0,0,.25) }
+.kakao{ display:inline-flex; align-items:center; justify-content:center; gap:8px; width:min(340px, 100%); font:900 18px/1 var(--ko); color:var(--kakao-ink); background:var(--kakao); border-radius:14px; padding:17px 0; text-decoration:none; box-shadow:0 5px 0 #C8B400 }
+.kakao svg{ width:22px; height:22px }
+.code{ font:700 13px/1.5 var(--ko); color:var(--rose-sub) }
+.code b{ font:400 20px/1 var(--display); letter-spacing:.2em; color:var(--rose-ink); margin-left:6px }
+@media (prefers-reduced-motion: reduce){ .busy img, #cNum.pop{ animation:none } }
+</style>
+</head>
+<body>
+
+<section class="scr" id="sJoin">
+  <p class="eyebrow">ARE YOU READY?</p>
+  <h1 class="logo">LUCKY<br>GRAB</h1>
+  <form class="join" id="joinForm" autocomplete="off">
+    <label for="nameIn">이름</label>
+    <input id="nameIn" maxlength="8" placeholder="큰 화면에 나올 이름 (8자까지)" enterkeyhint="go">
+    <button class="btn-lime" id="joinBtn" type="submit" disabled>JOIN</button>
+  </form>
+  <p class="small" id="joinStatus">게임 화면에 연결하는 중…</p>
+</section>
+
+<section class="scr colored" id="sWait" hidden>
+  <p class="eyebrow">YOU ARE</p>
+  <p class="pn" id="wPn">PLAYER 1</p>
+  <h2 class="big-ko" id="wName"></h2>
+  <p class="line" id="wColor"></p>
+  <img class="rot" src="assets/G.webp" alt="">
+  <p class="line" id="wStatus"></p>
+  <p class="small">폰을 가로로 돌리면 조종하기 편해요</p>
+</section>
+
+<section class="scr colored" id="sCount" hidden>
+  <p class="eyebrow" id="cName"></p>
+  <b id="cNum">3</b>
+  <p class="line">큰 화면을 보세요!</p>
+</section>
+
+<section class="ctrl" id="sPlay" hidden>
+  <header class="bar">
+    <span class="chip"><i></i><span id="pName">PLAYER 1</span></span>
+    <span class="timer" id="pTimer"><b id="pTime">20</b><small>SEC</small></span>
+    <span class="brand">LUCKY GRAB</span>
+  </header>
+  <div class="pads">
+    <div class="arrows">
+      <button class="imgbtn" id="bL" type="button" aria-label="왼쪽으로"><img src="assets/A.webp" alt=""></button>
+      <button class="imgbtn flip" id="bR" type="button" aria-label="오른쪽으로"><img src="assets/A.webp" alt=""></button>
+    </div>
+    <div class="grabwrap">
+      <button class="imgbtn grab" id="bG" type="button" aria-label="집기"><img src="assets/B.webp" alt=""></button>
+      <span>GRAB</span>
+    </div>
+  </div>
+  <p class="hint"><b>큰 화면</b>을 보면서 움직이세요 · 시간이 끝나면 저절로 집어요</p>
+  <div class="busy" id="busy" hidden>
+    <img src="assets/C.webp" alt="">
+    <h2 class="big-ko">뽑는 중이에요</h2>
+    <p class="small">큰 화면을 봐 주세요</p>
+  </div>
+</section>
+
+<section class="scr" id="sResult" hidden>
+  <p class="eyebrow" id="rEyebrow"></p>
+  <h2 class="big-ko" id="rBig"></h2>
+  <p class="line who" id="rWho"><i></i><span></span></p>
+  <img class="rimg" id="rImg" alt="">
+  <a class="kakao" id="rKakao" href="https://open.kakao.com/o/syj4zFkf" target="_blank" rel="noopener" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5C6.8 3.5 2.6 6.8 2.6 10.9c0 2.6 1.7 4.9 4.3 6.2l-1 3.6c-.1.3.3.6.6.4l4.2-2.8c.4 0 .9.1 1.3.1 5.2 0 9.4-3.3 9.4-7.5S17.2 3.5 12 3.5z" fill="currentColor"/></svg>
+    카톡으로 선물 받기
+  </a>
+  <p class="code" id="rCode" hidden>확인 코드<b></b></p>
+  <p class="small" id="rNote"></p>
+  <button class="btn-ghost" id="againBtn" type="button">처음으로</button>
+</section>
+
+<script type="module">
+const FB = {apiKey:"AIzaSyC_MlxFT3AFFb19l-XLwcKwxKtWam1g5To",authDomain:"teacher-letter-48131.firebaseapp.com",databaseURL:"https://teacher-letter-48131-default-rtdb.firebaseio.com",projectId:"teacher-letter-48131",storageBucket:"teacher-letter-48131.firebasestorage.app",messagingSenderId:"873083888112",appId:"1:873083888112:web:f157c8dc34f5c362dcbd35"};
+const ROOM = ((new URLSearchParams(location.search).get('room') || 'main').replace(/[^a-z0-9_-]/gi, '').slice(0, 24)) || 'main';
+const ROOT = 'rolling/luckygrab/' + ROOM;
+const KAKAO = 'https://open.kakao.com/o/syj4zFkf';
+const SEAT = { 1: { color: '#B8F400', ko: '연두' }, 2: { color: '#FF5FD8', ko: '핑크' } };
+const BALL = { '금색 공': '#F2B01E', '핑크 공': '#F43FD2', '연두 공': '#B8F400', '노란 공': '#FFDD1A', '파란 공': '#1270F5', '살구색 공': '#FFB083' };
+
+const $ = (id) => document.getElementById(id);
+const screens = ['sJoin', 'sWait', 'sCount', 'sPlay', 'sResult'];
+function show(id) { for (const s of screens) $(s).hidden = s !== id; current = id; }
+let current = 'sJoin';
+
+let api, db, state = {}, mySlot = 0, myName = '', players = {}, turn = {}, grabN = 0, dir = 0, lastResultAt = 0, unsub = [];
+const myId = (() => { try { let v = sessionStorage.getItem('lg-id'); if (!v) { v = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('lg-id', v); } return v; } catch (e) { return Math.random().toString(36).slice(2, 10); } })();
+try { $('nameIn').value = localStorage.getItem('lg-name') || ''; } catch (e) {}
+
+function status(text, warn) { const el = $('joinStatus'); el.textContent = text; el.classList.toggle('warn', !!warn); }
+function refreshJoin() {
+  const ph = state.phase;
+  const canJoin = ph === 'join';
+  $('joinBtn').disabled = !canJoin;
+  if (!api) return;
+  if (canJoin) status(state.mode === 2 ? '2인용이에요 · 먼저 들어온 사람이 연두, 다음 사람이 핑크' : '1인용이에요 · 이름을 넣고 JOIN을 누르세요');
+  else if (ph === 'select') status('진행자가 인원을 고르는 중이에요 · 곧 JOIN이 켜져요');
+  else if (ph === 'countdown' || ph === 'play') status('지금은 다른 사람이 하고 있어요 · 끝나면 JOIN이 켜져요', true);
+  else status('큰 화면이 아직 켜져 있지 않아요', true);
+}
+
+/* ---------- 연결 ---------- */
+try {
+  const [app, dbm] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js')]);
+  api = dbm; db = dbm.getDatabase(app.initializeApp(FB));
+  api.onValue(r('state'), (s) => onState(s.val() || {}));
+  api.onValue(r('players'), (s) => onPlayers(s.val() || {}));
+} catch (e) { status('인터넷 연결을 확인해 주세요', true); }
+function r(p) { return api.ref(db, ROOT + (p ? '/' + p : '')); }
+
+/* ---------- 입장: 빈 자리 중 가장 앞 번호를 차지 ---------- */
+$('joinForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('nameIn').value.trim().slice(0, 8);
+  if (!name) { status('이름을 넣어 주세요', true); $('nameIn').focus(); return; }
+  if (state.phase !== 'join') { refreshJoin(); return; }
+  try { localStorage.setItem('lg-name', name); } catch (err) {}
+  $('joinBtn').disabled = true; status('자리를 잡는 중…');
+  const mode = state.mode || 1;
+  try {
+    const res = await api.runTransaction(r('players'), (cur) => {
+      cur = cur || {};
+      for (let s = 1; s <= mode; s++) if (cur['p' + s] && cur['p' + s].id === myId) return cur;
+      for (let s = 1; s <= mode; s++) if (!cur['p' + s]) { cur['p' + s] = { id: myId, name, at: Date.now() }; return cur; }
+      return;   // 자리 없음
+    });
+    const val = res.snapshot.val() || {};
+    const slot = Object.keys(val).find((k) => val[k] && val[k].id === myId);
+    if (!res.committed || !slot) { status('자리가 다 찼어요 · 다음 판에 참여해 주세요', true); refreshJoin(); return; }
+    mySlot = +slot.slice(1); myName = name; grabN = 0; dir = 0; lastResultAt = 0;
+    api.onDisconnect(r('players/p' + mySlot)).remove();
+    for (const u of unsub) u(); unsub = [];
+    unsub.push(api.onValue(r('turn/p' + mySlot), (s) => onTurn(s.val() || {})));
+    unsub.push(api.onValue(r('result/p' + mySlot), (s) => onResult(s.val())));
+    paintSeat(); show('sWait'); onPlayers(players); keepAwake();
+  } catch (err) { status('잠깐 문제가 생겼어요 · 다시 눌러 주세요', true); refreshJoin(); }
+});
+
+function paintSeat() {
+  const seat = SEAT[mySlot] || SEAT[1];
+  document.documentElement.style.setProperty('--c', seat.color);
+  $('wPn').textContent = 'PLAYER ' + mySlot;
+  $('wName').textContent = myName + '님';
+  $('wColor').textContent = `${seat.ko} 크레인이 내 크레인이에요`;
+  $('pName').textContent = `PLAYER ${mySlot} · ${myName}`;
+  $('cName').textContent = `PLAYER ${mySlot} · ${myName}`;
+}
+
+/* ---------- 큰 화면 상태 따라가기 ---------- */
+function onState(v) {
+  state = v;
+  if (!mySlot) { refreshJoin(); return; }
+  if (current === 'sResult') return;
+  if (v.phase === 'countdown') {
+    show('sCount'); const b = $('cNum'); b.textContent = v.n || ''; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+    if (navigator.vibrate) navigator.vibrate(30);
+  } else if (v.phase === 'play') { show('sPlay'); onTurn(turn); }
+  else if (v.phase === 'join') { if (current !== 'sWait') show('sWait'); }
+  else { leave('새 게임이 시작돼요 · 다시 JOIN을 눌러 주세요'); }
+}
+function onPlayers(v) {
+  players = v;
+  if (!mySlot) return;
+  const mine = v['p' + mySlot];
+  if ((!mine || mine.id !== myId) && (state.phase === 'join' || state.phase === 'countdown') && current !== 'sResult') { leave('자리가 초기화됐어요 · 다시 JOIN을 눌러 주세요'); return; }
+  const need = state.mode || 1, have = Object.keys(v).length;
+  $('wStatus').textContent = have >= need ? '곧 시작해요!' : `다른 사람을 기다리는 중… ${have}/${need}`;
+}
+function onTurn(t) {
+  turn = t;
+  if (state.phase !== 'play' || current === 'sResult') return;
+  if (current !== 'sPlay') show('sPlay');
+  $('busy').hidden = t.state === 'aim' || !t.state || t.state === 'wait';
+  $('pTime').textContent = t.left != null ? t.left : '';
+  $('pTimer').classList.toggle('hot', t.state === 'aim' && t.left <= 5);
+}
+function leave(msg) { mySlot = 0; for (const u of unsub) u(); unsub = []; show('sJoin'); refreshJoin(); if (msg) status(msg, true); }
+
+/* ---------- 조종 ---------- */
+function send() { if (mySlot && api) api.set(r('input/p' + mySlot), { dir, grab: grabN }).catch(() => {}); }
+function hold(el, d) {
+  const on = (e) => { e.preventDefault(); el.classList.add('on'); dir = d; send(); };
+  const off = () => { el.classList.remove('on'); if (dir === d) { dir = 0; send(); } };
+  el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('pointerleave', off);
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+hold($('bL'), -1); hold($('bR'), 1);
+$('bG').addEventListener('pointerdown', (e) => {
+  e.preventDefault(); const b = $('bG'); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 140);
+  dir = 0; grabN++; send(); if (navigator.vibrate) navigator.vibrate(25);
+});
+$('bG').addEventListener('contextmenu', (e) => e.preventDefault());
+
+/* ---------- 결과 ---------- */
+function onResult(v) {
+  if (!v || v.at === lastResultAt) return;
+  lastResultAt = v.at;
+  const T = {
+    win1: ['1ST PRIZE', '1등 당첨', 'assets/D.webp'], win2: ['2ND PRIZE', '2등 당첨', 'assets/D.webp'], win3: ['GIFT', '선물 당첨', 'assets/D.webp'],
+    nogift: ['NICE CATCH', 'NICE!', 'assets/C.webp'], slip: ['ALMOST', 'SO CLOSE!', 'assets/E.webp'], miss: ['NEXT TIME', 'GOOD LUCK!', 'assets/E.webp'],
+  };
+  const key = v.kind === 'win' ? 'win' + (v.rank || 3) : v.kind;
+  const [eyebrow, big, img] = T[key] || T.miss;
+  const win = v.kind === 'win', sc = $('sResult');
+  sc.classList.toggle('win', win); sc.classList.toggle('second', win && v.rank === 2);
+  $('rEyebrow').textContent = eyebrow; $('rBig').textContent = big; $('rBig').classList.toggle('en', /^[A-Z !]+$/.test(big)); $('rImg').src = img;
+  const who = $('rWho'); who.querySelector('span').textContent = v.label ? `${myName}님 · ${v.label}` : `${myName}님`;
+  who.querySelector('i').hidden = !v.label; who.style.setProperty('--b', BALL[v.label] || '#C9CED7');
+  $('rKakao').hidden = !win; $('rCode').hidden = !win;
+  if (win) {
+    $('rCode').querySelector('b').textContent = v.code;
+    $('rNote').textContent = '버튼을 누르면 확인 문구가 복사돼요. 열린 채팅방에 붙여넣기만 하세요';
+    $('rKakao').onclick = () => {
+      const text = `LUCKY GRAB ${big} · ${myName} · 확인코드 ${v.code}`;
+      try { navigator.clipboard.writeText(text).catch(() => {}); } catch (e) {}
+    };
+  } else {
+    $('rNote').textContent = v.kind === 'nogift' ? '이번 공은 선물 공이 아니에요 · 참여해 줘서 고마워요' : v.kind === 'slip' ? '공이 올라가다 미끄러졌어요 · 참여해 줘서 고마워요' : '아무것도 못 잡았어요 · 참여해 줘서 고마워요';
+  }
+  show('sResult'); if (navigator.vibrate) navigator.vibrate(win ? [60, 60, 120] : 40);
+}
+$('againBtn').onclick = () => { mySlot = 0; for (const u of unsub) u(); unsub = []; show('sJoin'); refreshJoin(); };
+
+/* ---------- 화면 꺼짐 방지 ---------- */
+let lock = null;
+async function keepAwake() { try { lock = await navigator.wakeLock?.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && mySlot) keepAwake(); });
+</script>
+</body>
+</html>
