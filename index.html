@@ -253,7 +253,7 @@ import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.
 const CONFIG = {
   title: 'LUCKY GRAB',
   playSec: 20,          // 한 사람 조종 시간
-  slipChance: 0.15,     // 올라가다 미끄러질 확률
+  slipChance: 0,        // 미끄러짐 없음 — 공은 무조건 잡힘
   tries: 1,             // 폰으로 들어온 사람의 기회
   lottery: { people: 30, gifts: 3 },   // 기본값 — 실제 값은 관리자 페이지(admin.html)에서 (당첨 / 꽝 두 가지)
   players: [
@@ -289,24 +289,15 @@ function setDims(mode) {
 }
 
 /* =========================================================
-   소리 — 8비트 코로베이니키(러시아 민요, 테트리스 그 노래) + 효과음
+   소리 — 대기 화면 배경음악(직접 만든 곡) + 게임 중 조작음 + 두구두구 · 펑 · 팡파레
    ========================================================= */
 const Sound = (() => {
-  let ctx = null, master, music, sfx, on = true, next = 0, step = 0, fast = false;
+  let ctx = null, master, music, sfx, on = true, next = 0, step = 0, musicOn = true, motorOsc = null, motorGain = null, motorOn = false;
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-  const MEL = [
-    [76,2],[71,1],[72,1],[74,2],[72,1],[71,1],
-    [69,2],[69,1],[72,1],[76,2],[74,1],[72,1],
-    [71,3],[72,1],[74,2],[76,2],
-    [72,2],[69,2],[69,2],[0,2],
-    [74,3],[77,1],[81,2],[79,1],[77,1],
-    [76,3],[72,1],[76,2],[74,1],[72,1],
-    [71,2],[71,1],[72,1],[74,2],[76,2],
-    [72,2],[69,2],[69,2],[0,2],
-  ];
-  const BASS = [40, 45, 44, 45, 38, 36, 44, 45];
-  const timeline = new Array(64).fill(null);
-  { let t = 0; for (const [m, l] of MEL) { if (m) timeline[t] = [m, l]; t += l; } }
+  // 대기 화면 배경음악: 잔잔한 오락실 느낌 (C – Am – F – G, 직접 만든 곡)
+  const CHORDS = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
+  const LEAD = [[76,2],[79,2],[84,3],[79,1], [81,2],[79,2],[76,3],[72,1], [77,2],[81,2],[84,2],[81,2], [79,3],[77,1],[74,2],[71,2]];
+  const lead = new Array(32).fill(null); { let t = 0; for (const [m, l] of LEAD) { lead[t] = [m, l]; t += l; } }
   function tone(freq, t, dur, type, out, vol, slideTo) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, t);
@@ -316,21 +307,23 @@ const Sound = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.02);
   }
-  function noise(t, dur, vol, cutoff) {
-    const len = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  function noise(t, dur, vol, cutoff, out) {
+    const len = Math.max(1, Math.floor(ctx.sampleRate * dur)), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
     const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     s.buffer = buf; f.type = 'lowpass'; f.frequency.value = cutoff; g.gain.value = vol;
-    s.connect(f); f.connect(g); g.connect(sfx); s.start(t);
+    s.connect(f); f.connect(g); g.connect(out || sfx); s.start(t);
   }
   function schedule() {
-    const eighth = (60 / 150) / 2 / (fast ? 1.35 : 1);
+    const eighth = 60 / 104 / 2;
     while (next < ctx.currentTime + 0.3) {
-      const i = step % 64, n = timeline[i];
-      if (n) tone(hz(n[0]), next, n[1] * eighth * 0.92, 'square', music, 0.13);
-      const root = BASS[Math.floor(i / 8)];
-      tone(hz(root + (i % 2 ? 12 : 0)), next, eighth * 0.8, 'triangle', music, 0.26);
-      if (i % 2 === 1) noise(next, 0.03, 0.05, 7000);
+      if (musicOn) {
+        const i = step % 32, ch = CHORDS[Math.floor(i / 8)], loop = Math.floor(step / 32);
+        if (i % 2 === 0) tone(hz(ch[0] - 24 + (i % 4 === 2 ? 12 : 0)), next, eighth * 1.6, 'triangle', music, 0.24);
+        tone(hz(ch[[0, 1, 2, 1, 0, 2, 1, 2][i % 8]] + 12), next, eighth * 0.7, 'square', music, 0.03);
+        const n = lead[i]; if (n) tone(hz(n[0]), next, n[1] * eighth * 0.9, 'square', music, loop % 2 ? 0.04 : 0.065);
+        if (i % 2 === 1) noise(next, 0.025, 0.03, 8000, music);
+      }
       next += eighth; step++;
     }
   }
@@ -341,28 +334,54 @@ const Sound = (() => {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = on ? 0.8 : 0; master.connect(ctx.destination);
-      music = ctx.createGain(); music.gain.value = 0.55; music.connect(master);
+      music = ctx.createGain(); music.gain.value = musicOn ? 0.55 : 0; music.connect(master);
       sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
       next = ctx.currentTime + 0.1; setInterval(schedule, 60);
     },
     toggle() { on = !on; if (master) master.gain.setTargetAtTime(on ? 0.8 : 0, ctx.currentTime, 0.05); return on; },
-    set fast(v) { fast = v; },
-    drop()  { if (!ctx) return; tone(880, ctx.currentTime, 0.5, 'square', sfx, 0.06, 260); },
-    clunk() { if (!ctx) return; const t = ctx.currentTime; noise(t, 0.12, 0.35, 900); tone(110, t, 0.18, 'sine', sfx, 0.4, 55); },
-    lift()  { if (!ctx) return; tone(260, ctx.currentTime, 0.9, 'square', sfx, 0.035, 620); },
-    beep(hi){ if (!ctx) return; tone(hi ? 1320 : 880, ctx.currentTime, 0.09, 'square', sfx, 0.07); },
-    win() {
-      if (!ctx) return; const t = ctx.currentTime;
-      [72, 76, 79, 84, 79, 84].forEach((m, i) => tone(hz(m), t + i * 0.09, 0.16, 'square', sfx, 0.1));
-      [60, 64, 67, 72].forEach((m) => tone(hz(m), t + 0.56, 0.7, 'square', sfx, 0.05));
+    // 'lobby' = 배경음악, 'game' = 음악 끄고 조작음만
+    mode(m) {
+      const want = m === 'lobby'; if (want === musicOn) return; musicOn = want;
+      if (ctx) { music.gain.setTargetAtTime(want ? 0.55 : 0, ctx.currentTime, 0.35); if (want) step = 0; }
+      if (!want) this.motor(false);
     },
-    meh()  { if (!ctx) return; const t = ctx.currentTime; tone(hz(72), t, 0.12, 'square', sfx, 0.08); tone(hz(76), t + 0.12, 0.22, 'square', sfx, 0.08); },
+    motor(onFlag) {   // 크레인이 움직이는 동안 '위이잉'
+      if (!ctx) return;
+      if (!motorOsc) {
+        motorOsc = ctx.createOscillator(); motorOsc.type = 'sawtooth'; motorOsc.frequency.value = 64;
+        const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 7; lg.gain.value = 5; lfo.connect(lg); lg.connect(motorOsc.frequency); lfo.start();
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+        motorGain = ctx.createGain(); motorGain.gain.value = 0;
+        motorOsc.connect(lp); lp.connect(motorGain); motorGain.connect(sfx); motorOsc.start();
+      }
+      if (onFlag !== motorOn) { motorOn = onFlag; motorGain.gain.setTargetAtTime(onFlag ? 0.08 : 0, ctx.currentTime, 0.06); }
+    },
+    drop()  { if (!ctx) return; tone(700, ctx.currentTime, 0.28, 'square', sfx, 0.05, 300); },
+    clunk() { if (!ctx) return; const t = ctx.currentTime; noise(t, 0.12, 0.35, 900); tone(110, t, 0.18, 'sine', sfx, 0.4, 55); },
+    lift()  {},
+    beep(hi){ if (!ctx) return; tone(hi ? 1320 : 880, ctx.currentTime, 0.09, 'square', sfx, 0.07); },
+    roll(dur) {   // 3·2·1 동안 두구두구
+      if (!ctx) return; const t0 = ctx.currentTime; let t = 0;
+      while (t < dur) { const k = t / dur; noise(t0 + t, 0.05, 0.07 + 0.3 * k, 3200); t += 0.12 - 0.075 * k; }
+      tone(hz(40), t0, dur, 'triangle', sfx, 0.14);
+    },
     pop(big) {
       if (!ctx) return; const t = ctx.currentTime;
       noise(t, big ? 0.45 : 0.25, big ? 0.7 : 0.45, big ? 2600 : 1600); tone(big ? 90 : 120, t, 0.35, 'sine', sfx, 0.5, 40);
-      if (!big) tone(hz(76), t + 0.08, 0.14, 'square', sfx, 0.06);
     },
-    miss() { if (!ctx) return; const t = ctx.currentTime; [[392, 370], [370, 349], [349, 262]].forEach(([a, b], i) => tone(a, t + i * 0.28, i === 2 ? 0.7 : 0.26, 'triangle', sfx, 0.18, b)); },
+    win() {
+      if (!ctx) return; const t = ctx.currentTime + 0.1;
+      [72, 76, 79, 84, 79, 84].forEach((m, i) => tone(hz(m), t + i * 0.09, 0.16, 'square', sfx, 0.1));
+      [60, 64, 67, 72].forEach((m) => tone(hz(m), t + 0.56, 0.8, 'square', sfx, 0.05));
+      [96, 100, 103].forEach((m, i) => tone(hz(m), t + 0.6 + i * 0.07, 0.25, 'sine', sfx, 0.05));
+    },
+    aww() {   // 다음 기회에~
+      if (!ctx) return; const t = ctx.currentTime + 0.1;
+      tone(hz(67), t, 0.3, 'triangle', sfx, 0.2, hz(64)); tone(hz(64), t + 0.32, 0.3, 'triangle', sfx, 0.2, hz(62)); tone(hz(62), t + 0.64, 0.7, 'triangle', sfx, 0.2, hz(55));
+    },
+    meh() { this.aww(); },
+    miss() { this.aww(); },
+    set fast(v) {},
   };
 })();
 
@@ -736,7 +755,7 @@ class Claw {
             const d = Math.hypot(p.x - g.x, (p.y - g.y) * 0.8, p.z - g.z);
             if (d < 0.62 + b.r * 0.35 && d < pd) { pd = d; pick = b; }
           }
-          if (!pick && this.mustWin) for (const b of balls) {   // 당첨 차례: 가장 가까운 공을 붙잡음
+          if (!pick) for (const b of balls) {   // 공은 무조건 잡힘: 가장 가까운 공을 붙잡음
             if (b.held) continue; const p = b.body.translation(), g = this.grabPoint(b.r);
             const d = Math.hypot(p.x - g.x, p.y - g.y, p.z - g.z); if (d < pd) { pd = d; pick = b; }
           }
@@ -746,7 +765,7 @@ class Claw {
             pick.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
             const p = pick.body.translation(); this.holdFrom = { x: p.x, y: p.y, z: p.z };
           } else { this.theta = SHUT_T; }
-          this.slipAt = pick && this.ticket > 0 ? 2 : Math.random() < CONFIG.slipChance ? rand(0.35, 0.7) : 2;
+          this.slipAt = pick && this.ticket > 0 ? 2 : Math.random() < CONFIG.slipChance ? rand(0.35, 0.7) : 2;   // slipChance 0이면 안 미끄러짐
           this.liftFrom = this.y; this.state = 'lift'; this.t = 0; Sound.lift();
         }
         break;
@@ -768,7 +787,8 @@ class Claw {
         if (b.mesh.material === TYPES[b.type].mat) { b.mesh.material = b.mesh.material.clone(); b.mesh.material.emissive.set(TYPES[b.type].color); }
         const step = Math.floor(T / STEP);
         if (step !== this.cdStep && step < 3) {
-          this.cdStep = step; showCd(this, 3 - step); Sound.beep(step === 2);
+          if (step === 0) Sound.roll(STEP * 3);
+          this.cdStep = step; showCd(this, 3 - step);
         }
         this.shake = k;
         b.mesh.scale.setScalar(b.r * (1 + 0.12 * k + 0.05 * k * Math.sin(T * 38)));
@@ -894,7 +914,7 @@ function showResult(claw, res) {
     Net.set('result/p' + claw.player.slot, { kind: res.kind, rank: res.rank || 0, label: res.label || '', name: claw.player.name, code, at });
     if (res.kind === 'win') Net.set('winners/w' + at + claw.player.slot, { name: claw.player.name, rank: res.rank, code, at, sent: false });
   }
-  if (res.kind === 'win') Sound.win(); else if (res.kind === 'nogift') Sound.meh(); else if (res.kind === 'miss') Sound.miss();
+  if (res.kind === 'win') Sound.win(); else Sound.aww();
   setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 420); }, 3400);
 }
 
@@ -1155,6 +1175,7 @@ function renderSlots() {
   }
 }
 function showStep(which) {
+  Sound.mode('lobby');
   $('stepSelect').hidden = which !== 'select';
   $('stepScan').hidden = which !== 'scan';
   counting = false; $('count').hidden = true;
@@ -1172,7 +1193,7 @@ function showReady() {
   $('ready').classList.remove('hide'); showStep('select');
 }
 function startCountdown() {
-  if (counting) return; counting = true; phase = 'countdown'; startSound();
+  if (counting) return; counting = true; phase = 'countdown'; startSound(); Sound.mode('game');
   $('ready').classList.add('hide');
   const el = $('count'), b = $('countNum'); el.hidden = false;
   const seq = ['3', '2', '1', 'GO!']; let i = 0;
@@ -1189,7 +1210,7 @@ function startCountdown() {
   tick();
 }
 function hideReady() {
-  startSound(); counting = false; $('count').hidden = true;
+  startSound(); Sound.mode('game'); counting = false; $('count').hidden = true;
   remoteGame = claws.some((c) => c.player);
   for (const c of claws) {
     c.time = CONFIG.playSec; c.lastBeep = 99; c.triesLeft = CONFIG.tries;
@@ -1228,7 +1249,7 @@ renderer.setAnimationLoop(() => {
   while (acc >= world.timestep && n < 4) { world.step(); acc -= world.timestep; n++; }
   if (n === 4) acc = 0;
   syncBalls(); updateSparks(dt); layoutOverlay();
-  Sound.fast = claws.some((c) => c.state === 'aim' && c.time <= 5);
+  Sound.motor(playing && claws.some((c) => (c.state === 'aim' && Math.abs(c.vx) > 0.4) || c.state === 'drop' || c.state === 'lift'));
   draw();
 });
 </script>

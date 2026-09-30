@@ -154,7 +154,7 @@ async function start() {
   if (c) { $('fPeople').value = c.people; $('fGift').value = c.gifts ?? ((c.first | 0) + (c.second | 0)); }
   const setNote = () => {
     const n = +$('fPeople').value || 0, g = +$('fGift').value || 0;
-    $('setNote').innerHTML = g > n ? '<b>선물이 인원보다 많아요.</b> 인원을 늘리거나 선물을 줄여 주세요.' : `<b>${n}명</b> 안에서 선물 <b>${g}개</b>가 무작위 순서로 모두 나가요. 공을 잡은 사람마다 제비를 한 장씩 뽑아요.`;
+    $('setNote').innerHTML = g > n ? '<b>선물이 인원보다 많아요.</b> 인원을 늘리거나 선물을 줄여 주세요.' : `<b>${n}명</b> 안에서 선물 <b>${g}개</b>가 무작위 순서로 모두 나가요. 한 사람이 할 때마다 제비를 한 장씩 뽑아요.`;
   };
   document.querySelectorAll('.step button').forEach((b) => b.addEventListener('click', () => {
     const el = $(b.dataset.t); el.value = Math.max(+el.min, Math.min(+el.max, (+el.value || 0) + (+b.dataset.d))); setNote();
@@ -177,7 +177,7 @@ async function start() {
     $('sLeft1').innerHTML = `${(rest.match(/[12]/g) || []).length}<small>개</small>`;
     $('sWon').innerHTML = `${(v.deck.slice(0, v.drawn).match(/[12]/g) || []).length}<small>명</small>`;
     $('sBar').style.width = Math.min(100, v.drawn / Math.max(1, total) * 100) + '%';
-    $('sNote').textContent = v.drawn >= total ? '제비를 다 뽑았어요. 이제부터는 모두 NICE!가 나와요. 더 하려면 새로 섞어 주세요.' : '공을 잡은 사람만 제비를 뽑아요. 헛손질은 세지 않아요.';
+    $('sNote').textContent = v.drawn >= total ? '제비를 다 뽑았어요. 이제부터는 모두 NICE!가 나와요. 더 하려면 새로 섞어 주세요.' : '한 사람이 할 때마다 제비를 한 장씩 뽑아요. 공은 누구나 무조건 잡아요.';
   });
 
   // 당첨자 목록
